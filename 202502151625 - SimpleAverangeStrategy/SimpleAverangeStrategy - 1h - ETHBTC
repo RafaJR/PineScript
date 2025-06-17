@@ -1,0 +1,87 @@
+//@version=5
+// Aplicar en temporalidad de 5m
+strategy(title="Medias móbiles depurada",
+         shorttitle="Estrategia de medias móbiles depurada", overlay = true, pyramiding = 0,
+         calc_on_order_fills = false, commission_type =  strategy.commission.percent,
+         commission_value = 0.1, default_qty_type = strategy.percent_of_equity, default_qty_value = 100,
+         initial_capital=100, currency=currency.USD)
+
+// Parámetros de configuración de la Estrategia
+// fast 80 standard
+var int vstep = 10
+var int fastEmaPeriod = input.int(20, title="Media móbi rápita", minval=1, step=vstep, inline="Fast EMA", group="Medias móbiles")
+var int slowEmaPeriod = input.int(40, title="Media móbi lenta", minval=1, step=vstep, inline="Slow EMA", group="Medias móbiles")
+
+// rsi 21 Standard
+//var int rsiAverange = input.int(11, title="RSI Averange", group="Indicadores complementarios")
+// rsi level 50 standard
+//var int rsiLevel = input.int(68, title="RSI level", group="Indicadores complementarios")
+// adx level 20
+//var int adxLevel = input.int(30, inline="ADX Level", group="Indicadores complementarios")
+//var int len_dmi = input.int(15, minval=1, title="DI Length", group="Indicadores complementarios")
+// lensig_dmi 14 standard
+//var int lensig_dmi = input.int(19, title="ADX Smoothing", minval=1, group="Indicadores complementarios")
+
+source = input.source(close)
+
+// StopLoss / TakeProffit percents
+stopLossPercent = input(4, title="Porcentaje de Stop Loss (%)", group="Risk control")
+takeProfitPercent = input(13, title="Porcentaje de Take Profit (%)", group="Risk control")
+
+// EMAs
+fastEma = ta.ema(source, fastEmaPeriod)
+slowEma = ta.ema(source, slowEmaPeriod)
+fastEmaPlot = plot(fastEma, title="Fast EMA", color=color.white, linewidth=1)
+slowEmaPlot = plot(slowEma, title="Slow EMA", color=color.white, linewidth=3)
+fillColor = fastEma > slowEma ? color.new(color.green, 80) : color.new(color.red, 80)
+fill(fastEmaPlot, slowEmaPlot, fillColor, fillgaps=true)
+
+// Indicadores adicionales para filtrar señales
+// RSI
+//rsi = ta.rsi(source, rsiAverange)
+//plot(rsi, title="RSI", color=color.blue)
+// ADX
+//[diplus, diminus, adx] = ta.dmi(len_dmi, lensig_dmi)
+
+// Variables para la detección de señales de compra/venta o la parada de las mismas.
+var bool trendIsBullish = false
+var bool trendIsBearish = false
+var bool longEntry = false
+var bool shortEntry = false
+
+if(ta.crossover(fastEma, slowEma))
+    trendIsBullish := true
+    trendIsBearish := false
+if(ta.crossunder(fastEma, slowEma))
+    trendIsBullish := false
+    trendIsBearish := true
+
+longEntry := trendIsBullish //and rsi > rsiLevel and adx > adxLevel
+shortEntry := trendIsBearish //and rsi < rsiLevel and adx > adxLevel
+
+// Variables para establecer nomenclatura de operaciones
+var int longOpCount = 0
+var int shortOpCount = 0
+var string longOpName = ""
+var string shortOpName = ""
+//if (year == 2024 and month == 1)
+//if (year == 2024 and month == 1 and dayofmonth >= 6 and dayofmonth <= 7)
+if (true)
+    if (longEntry)
+        trendIsBullish := false
+        trendIsBearish := false
+        longOpCount += 1
+        longOpName := "Long" + str.tostring(longOpCount)
+        stopLossPrize = source - (source * (stopLossPercent / 100))
+        takeProfitPrize = source + (source * (takeProfitPercent / 100))
+        strategy.entry(longOpName, strategy.long)
+        strategy.exit(longOpName + "Exit", longOpName, stop=stopLossPrize, limit=takeProfitPrize)
+    if (shortEntry)
+        trendIsBullish := false
+        trendIsBearish := false
+        shortOpCount += 1
+        shortOpName := "Short" + str.tostring(shortOpCount)
+        stopLossPrize = source + (source * (stopLossPercent / 100))
+        takeProfitPrize = source - (source * (takeProfitPercent / 100))
+        strategy.entry(shortOpName, strategy.short)
+        strategy.exit(shortOpName + "Exit", shortOpName, stop=stopLossPrize, limit=takeProfitPrize)

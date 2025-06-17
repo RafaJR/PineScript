@@ -1,0 +1,143 @@
+//@version=5
+strategy(title="Alligator",
+         shorttitle="Estrategia basada en el indicador Alligator de Bill Williams", overlay = true, pyramiding = 0, 
+         calc_on_order_fills = false, commission_type =  strategy.commission.percent, 
+         commission_value = 0.1, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, 
+         initial_capital=100, currency=currency.EUR)
+stopLossPercent = input(50, title="Porcentaje del Stop Loss (%)")
+
+lengthJaw = input.int(13, title="Jaw Length")
+offsetJaw = input.int(8, title="Jaw Offset")
+lengthTeeth = input.int(8, title="Teeth Length")
+offsetTeeth = input.int(5, title="Teeth Offset")
+lengthLips = input.int(5, title="Lips Length")
+offsetLips = input.int(3, title="Lips Offset")
+
+// Calcular las medias móviles suavizadas
+lips = ta.sma(ta.sma(hl2, lengthLips), lengthLips)
+teeth = ta.sma(ta.sma(hl2, lengthTeeth), lengthTeeth)
+jaw = ta.sma(ta.sma(hl2, lengthJaw), lengthJaw)
+
+// Pintar las medias móviles con los offsets correspondientes
+plot(lips[offsetLips], title="Lips", color=color.green, linewidth=1)
+plot(teeth[offsetTeeth], title="Teeth", color=color.red, linewidth=2)
+plot(jaw[offsetJaw], title="Jaw", color=color.blue, linewidth=3)
+
+// Calcular los valores del oscilador Gator
+gator_upper = jaw - teeth
+gator_lower = teeth - lips
+
+// Calcular los colores del oscilador Gator
+gator_upper_color = color.white
+gator_lower_color = color.white
+var bool awakeningAlligator = false
+var bool huntingAlligator = false
+var bool satedAlligator = false
+var bool sleepingAlligator = false
+if (gator_upper > gator_upper[1] and gator_lower > gator_lower[1]) 
+    huntingAlligator := true
+    awakeningAlligator := false
+    satedAlligator := false
+    sleepingAlligator := false
+    gator_upper_color := color.green
+    gator_lower_color := color.green
+else if (gator_upper < gator_upper[1] and gator_lower < gator_lower[1])
+    sleepingAlligator := true
+    huntingAlligator := false
+    awakeningAlligator := false
+    satedAlligator := false
+    gator_upper_color := color.red
+    gator_lower_color := color.red
+else
+    gator_upper_color := gator_upper > gator_upper[1] ? color.green : color.red
+    gator_lower_color := gator_lower > gator_lower[1] ? color.green : color.red
+    if (sleepingAlligator)
+        awakeningAlligator := true
+        huntingAlligator := false
+        satedAlligator := false
+        sleepingAlligator := false
+    else if (huntingAlligator)
+        satedAlligator := true
+        awakeningAlligator := false
+        huntingAlligator := false
+        sleepingAlligator := false
+    else
+        awakeningAlligator := false
+        huntingAlligator := false        
+        satedAlligator := false
+        sleepingAlligator := false
+
+// Representación del oscilador Gator en la parte baja del gráfico
+//hline(0, "Eje Central", color=color.white, linewidth=1)
+//plot(gator_upper, title="Upper Gator", color=gator_upper_color, style=plot.style_histogram, linewidth=10)
+//plot(-gator_lower, title="Lower Gator", color=gator_lower_color, style=plot.style_histogram, linewidth=10)
+
+// Algunos iconos de ayuda para interpretar el oscilador Gator
+plotshape(series=huntingAlligator, location=location.belowbar, style=shape.circle, color=#9ae667, text="Hu", textcolor=color.white, offset=-1)
+plotshape(series=sleepingAlligator, location=location.belowbar, style=shape.xcross, color=#ec4343, text="Sl", textcolor=color.white, offset=-1)
+plotshape(series=awakeningAlligator, location=location.belowbar, style=shape.arrowup, color=#f36411, text="Aw", textcolor=color.white, offset=-1)
+plotshape(series=satedAlligator, location=location.belowbar, style=shape.square, color=color.white, text="Sa", textcolor=color.white, offset=-1)
+
+// Indicadores de operaciones abiertas.
+var bool longOperationOn = false
+var bool shortOperationOn = false
+
+// Variables para la detecciónde señales de compra/venta o la parada de las mismas.
+var bool longEntry = false
+var bool shortEntry = false
+var bool closeLongEntry = false
+var bool closeShortEntry = false
+
+// Variables para detección de arranque de tentencia según las medias Alligator
+var bool upTrendCross = false
+var bool downTrendCross = false
+
+if (ta.crossunder(jaw, teeth) and lips > teeth and teeth > jaw)
+    upTrendCross := true
+    downTrendCross := false
+if (ta.crossover(jaw, teeth) and lips < teeth and teeth < jaw)
+    downTrendCross := true
+    upTrendCross :=  false
+
+// Se considera momento favorable para la compra cuando se produce un cruce que ordena las medias según orden apropiado alcista.
+longEntry := not longOperationOn and upTrendCross and huntingAlligator
+// Se cierra una operación de compra cuando se produce un cruce que ordena las medias según orden apropiado bajista
+closeLongEntry := longOperationOn and (downTrendCross or (sleepingAlligator and not (lips > teeth and teeth > jaw)))
+// Se considera momento favorable para la venta cuando se produce un cruce que ordena las medias en orden apropiado bajista
+shortEntry := not shortOperationOn and downTrendCross and huntingAlligator
+// Se cierra una operación de venta cuando se produce un cruce que ordena las medias en orden apropiado alcista o cuando no se da ningún orden apropiado y además el estado del mercado es 'Alligator durmiendo'
+closeShortEntry := shortOperationOn and (upTrendCross or (sleepingAlligator and not (lips < teeth and teeth < jaw)))
+
+// Variables para establecer nomenclatura de operaciones
+var int longOpCount = 0
+var int shortOpCount = 0
+var string longOpName = ""
+var string shortOpName = ""
+
+// Imprimir una barra vertical verde cuando `longEntry` es verdadero
+if (longEntry)
+    longOperationOn := true
+    shortOperationOn := false
+    longOpCount := longOpCount + 1 
+    longOpName := "Long" + str.tostring(longOpCount)
+    label.new(x=bar_index, y=low, text=longOpName, style=label.style_label_up, color=#1fdf26, textcolor=#000000, size=size.small, textalign=text.align_center)
+    stopLossPrize = close * (1 - stopLossPercent / 100)
+    strategy.entry(longOpName, strategy.long)
+    strategy.exit(longOpName + "SL", longOpName, stop = stopLossPrize)
+if (closeLongEntry)
+    longOperationOn := false
+    label.new(x=bar_index, y=low, text="Close"+longOpName, style=label.style_xcross, color=#1fdf26, textcolor=#ffffff, size=size.small, textalign=text.align_center)
+    strategy.close(longOpName) 
+if (shortEntry)
+    shortOperationOn := true
+    longOperationOn := false
+    shortOpCount := shortOpCount + 1 
+    shortOpName := "Short" + str.tostring(shortOpCount)
+    label.new(x=bar_index, y=high, text=shortOpName, style=label.style_label_down, color=#e90808, textcolor=#000000, size=size.small, textalign=text.align_center)
+    stopLossPrize = close * (1 + stopLossPercent / 100)
+    strategy.entry(shortOpName, strategy.short)
+    strategy.exit(shortOpName + "SL", shortOpName, stop = stopLossPrize)
+if (closeShortEntry)
+    shortOperationOn := false
+    label.new(x=bar_index, y=high, text="Close"+shortOpName, style=label.style_xcross, color=#e90808, textcolor=#ffffff, size=size.small, textalign=text.align_center)
+    strategy.close(shortOpName)

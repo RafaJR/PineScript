@@ -1,0 +1,164 @@
+//@version=5
+strategy("JurikBasedStrategy", shorttitle="Jurik averange based strategy", overlay=true, pyramiding=0,
+         calc_on_order_fills=false, commission_type=strategy.commission.percent,
+         commission_value=0.1, default_qty_type=strategy.percent_of_equity, default_qty_value=100,
+         initial_capital=1000, currency=currency.USD)
+
+// StopLoss / TakeProffit percents
+stopLossPercent = input.float(4.7, title="Porcentaje de Stop Loss (%)", step=0.1, group="Risk control")
+takeProfitPercent = input.float(67.2, title="Porcentaje de Take Profit (%)", step=0.1, group="Risk control")
+
+// Jurik Moving Average
+length = input.int(title="Length", defval=7, minval=1)
+phase = input.int(title="Phase", defval=50, minval=-100, maxval=100)
+power = input.int(title="Power", defval=2, minval=1)
+src = input.source(defval=close, title="Source")
+
+
+var color bullishColor = #00ff08
+var color bearishColor = #ff0404
+
+// Slow EMA inputs
+slowEmaAverage = input.int(defval=535, step=1, group="EMAs")
+
+// Slow EMA
+slowEma = ta.wma(close, slowEmaAverage)
+
+// phaseRatio - beta - alpha
+phaseRatio = phase < -100 ? 0.5 : phase > 100 ? 2.5 : phase / 100 + 1.5
+beta = 0.45 * (length - 1) / (0.45 * (length - 1) + 2)
+alpha = math.pow(beta, power)
+
+// Calculation vars
+var float jma = na
+var float e0 = na
+var float e1 = na
+var float e2 = na
+
+// Jurik Moving Average calculation
+e0 := (1 - alpha) * src + alpha * nz(e0[1])
+e1 := (src - e0) * (1 - beta) + beta * nz(e1[1])
+e2 := (e0 + phaseRatio * e1 - nz(jma[1])) * math.pow(1 - alpha, 2) + math.pow(alpha, 2) * nz(e2[1])
+jma := e2 + nz(jma[1])
+
+// jma stats and colors
+jmaColor = color.white
+
+bool trendIsBullish = jma > jma[1]
+bool trendIsBearish = jma < jma[1]
+
+
+// Plotting
+// JMA ploting
+if trendIsBullish
+    jmaColor := bullishColor
+else if trendIsBearish
+    jmaColor := bearishColor
+
+var jmaPlot = plot(jma, title="JMA", linewidth=2, color=color.new(jmaColor, 0))
+
+// Slow EMA ploting
+var color slowEmaColor = color.white
+var color jmaEmaFillColor = color.white
+if (slowEma < jma)
+    slowEmaColor := bullishColor
+    jmaEmaFillColor := color.new(bullishColor, 80)
+if (slowEma > jma)
+    slowEmaColor := bearishColor
+    jmaEmaFillColor := color.new(bearishColor, 80)
+var slowEmaPlot = plot(slowEma, title="Slow EMA", linewidth=1, color=slowEmaColor)
+
+// Variables to detect divergence and store extreme prices
+var bool divergenceBullish = false  // Divergence: Jurik is bullish, and EMA is bearish
+var bool divergenceBearish = false  // Divergence: Jurik is bearish, and EMA is bullish
+
+
+// Detect divergence
+divergenceBullish := slowEma < jma and trendIsBearish
+divergenceBearish := slowEma > jma and trendIsBullish
+
+if (divergenceBullish)
+    jmaEmaFillColor := color.new(bullishColor, 95)
+if (divergenceBearish)
+    jmaEmaFillColor := color.new(bearishColor, 95)
+
+fill(slowEmaPlot, jmaPlot, jmaEmaFillColor, fillgaps=true)
+
+// Variables to store extreme prices and their respective bar index
+var float highestInBullish = na    // Stores the highest price in bullish divergence
+var int highestInBullishIndex = na // Stores the index of the highest price in bullish divergence
+var float lowestInBearish = na     // Stores the lowest price in bearish divergence
+var int lowestInBearishIndex = na  // Stores the index of the lowest price in bearish divergence
+
+// Detect price extremes in divergence zones
+if (divergenceBullish)
+    // Update the highest price and its index in bullish divergence zone
+    if na(highestInBullish) or high > highestInBullish
+        highestInBullish := high
+        highestInBullishIndex := bar_index  // Save the index of the extreme price
+
+if (divergenceBearish)
+    // Update the lowest price and its index in bearish divergence zone
+    if na(lowestInBearish) or low < lowestInBearish
+        lowestInBearish := low
+        lowestInBearishIndex := bar_index  // Save the index of the extreme price
+
+// When divergences end, draw the line
+if (not divergenceBullish and not na(highestInBullish))
+    line.new(x1=highestInBullishIndex, x2=bar_index, y1=highestInBullish, y2=highestInBullish,
+             color=color.white, width=2, style=line.style_solid)
+    highestInBullish := na            // Reset the variable for the next divergence
+    highestInBullishIndex := na       // Reset the index
+
+if (not divergenceBearish and not na(lowestInBearish))
+    line.new(x1=lowestInBearishIndex, x2=bar_index, y1=lowestInBearish, y2=lowestInBearish,
+             color=color.white, width=2, style=line.style_solid)
+    lowestInBearish := na             // Reset the variable for the next divergence
+    lowestInBearishIndex := na        // Reset the index
+
+//*********************************************************************************************
+// Operational
+//*********************************************************************************************
+longEntry = trendIsBullish and jma > slowEma
+shortEntry = trendIsBearish and jma < slowEma
+killLongEntry = ta.crossover(slowEma, jma)
+killShortEntry = ta.crossunder(slowEma, jma)
+var bool operationalBusy = false
+
+//if (year == 2024 and month == 1 and dayofmonth >= 6 and dayofmonth <= 7)
+//if (year == 2025 and month == 3)
+if (true)
+    // Operation nomenclature variables
+    var int longOpCount = 0
+    var int shortOpCount = 0
+    var string longOpName = ""
+    var string shortOpName = ""
+
+    if(killLongEntry)
+        strategy.close(id=longOpName)
+        operationalBusy := false
+    if(killShortEntry)
+        strategy.close(id=shortOpName)
+        operationalBusy := false
+    if (longEntry and not operationalBusy)
+        longOpCount += 1
+        longOpName := "Long"
+        longOpComment = longOpName + str.tostring(longOpCount)
+        strategy.entry(id=longOpName, direction=strategy.long, comment=longOpComment)
+        stopLossPrize = strategy.position_avg_price * (1 - stopLossPercent / 100)
+        takeProfitPrize = strategy.position_avg_price * (1 + takeProfitPercent / 100)
+        //strategy.exit(longOpName + "Exit", longOpName, stop=stopLossPrize)
+        strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, limit=takeProfitPrize)
+        operationalBusy := true
+    if (shortEntry and not operationalBusy)
+        shortOpCount += 1
+        shortOpName := "Short"
+        shortOpComment = shortOpName + str.tostring(shortOpCount)
+        strategy.entry(id=shortOpName, direction=strategy.short, comment=shortOpComment)
+        stopLossPrize = strategy.position_avg_price * (1 + stopLossPercent / 100)
+        takeProfitPrize = strategy.position_avg_price * (1 - takeProfitPercent / 100)
+        //strategy.exit(shortOpName + "Exit", shortOpName, stop=stopLossPrize)
+        strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, limit=takeProfitPrize)
+        operationalBusy := true
+    if (strategy.position_size == 0)
+        operationalBusy := false

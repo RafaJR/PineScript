@@ -1,0 +1,228 @@
+//@version=5
+strategy(title="ITGSCalperBasedStrategy", shorttitle="Estrategia basada en el indicador ITGSCalper", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.1, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD)
+
+// Advice: Operar sobre el intrumento 'Bitcoin/Dólar estadounidense Binance' en temporalidad de 1 minuto
+
+// Configuración de entrada
+source = input.source(close)
+
+stopLossPercent = input(3, title="Porcentaje de Stop Loss (%)")
+takeProfitPercent = input(5, title="Porcentaje de Take Profit (%)")
+
+// Input settings for K and N values
+k  = input.int(1, title="Neighbors", minval=1, maxval=100,inline="AI", group="AI Settings")
+n_ = input.int(9, title="Data", minval=1, maxval=100,inline="AI", group="AI Settings")
+n  = math.max(k,n_)
+
+// Input settings for prediction values
+KNN_PriceLen = input.int(8, title="Price Trend", minval=2, step=10,inline="AITrend", group="AI Trend")
+KNN_STLen    = input.int(20, title="Prediction Trend", minval=2, step=10, inline="AITrend", group="AI Trend")
+aisignals    = input.bool(true,title="AI Trend Signals",inline="signal", group="AI Trend")
+Bullish_col  = input.color(color.lime,"",inline="signal", group="AI Trend")
+Bearish_col  = input.color(color.red,"",inline="signal", group="AI Trend")
+
+// Define SuperTrend parameters
+len    = input.int(51, "Length", minval=1,inline="SuperTrend - slow", group="Super Trend Settings")
+factor = input.float(2.5,step=.1,inline="SuperTrend - fast", group="Super Trend Settings")
+rsiAverange = input.int(2,inline="RSI Averange", group="Complementary indicators")
+rsiLowLevel = input.int(26,inline="RSI level", group="Complementary indicators")
+rsiHighLevel = input.int(56,inline="RSI level", group="Complementary indicators")
+
+adxLevel = input.int(19, inline="ADX Level", group="Complementary indicators")
+adxOutLevel = input.int(5, inline="ADX Out Level", group="Complementary indicators")
+maSrc  = input.string("WMA","Moving Average Source",["SMA","EMA","WMA","RMA","VWMA"],inline="", group="Super Trend Settings")
+upCol  = input.color(color.lime,"Bullish Color",inline="col", group="Super Trend Coloring")
+dnCol  = input.color(color.red,"Bearish Color",inline="col", group="Super Trend Coloring")
+neCol  = input.color(color.blue,"Neutral Color",inline="col", group="Super Trend Coloring")
+
+// Alligator settings
+lengthJaw = input.int(19, title="Jaw Length")
+offsetJaw = input.int(14, title="Jaw Offset")
+lengthTeeth = input.int(14, title="Teeth Length")
+offsetTeeth = input.int(11, title="Teeth Offset")
+lengthLips = input.int(11, title="Lips Length")
+offsetLips = input.int(9, title="Lips Offset")
+
+// Leverange settings
+// Leverage input
+leverage = input.float(1.0, title="Leverage", minval=1.0, step=0.1)
+
+// Calculate the SuperTrend
+vwma = switch maSrc
+    "SMA"  => ta.sma(source*volume, len) / ta.sma(volume, len)
+    "EMA"  => ta.ema(source*volume, len) / ta.ema(volume, len)
+    "WMA"  => ta.wma(source*volume, len) / ta.wma(volume, len)
+    "RMA"  => ta.rma(source*volume, len) / ta.rma(volume, len)
+    "VWMA" => ta.vwma(source*volume, len) / ta.vwma(volume, len)
+
+atr = ta.atr(len)
+upperBand = vwma + factor * atr
+lowerBand = vwma - factor * atr
+prevLowerBand = nz(lowerBand[1])
+prevUpperBand = nz(upperBand[1])
+
+lowerBand := lowerBand > prevLowerBand or source[1] < prevLowerBand ? lowerBand : prevLowerBand
+upperBand := upperBand < prevUpperBand or source[1] > prevUpperBand ? upperBand : prevUpperBand
+int direction = na
+float superTrend = na
+prevSuperTrend = superTrend[1]
+if na(atr[1])
+    direction := 1
+else if prevSuperTrend == prevUpperBand
+    direction := source > upperBand ? -1 : 1
+else
+    direction := source < lowerBand ? 1 : -1
+superTrend := direction == -1 ? lowerBand : upperBand
+
+// Collect data points and their corresponding labels
+price  = ta.wma(source, KNN_PriceLen)
+sT     = ta.wma(superTrend, KNN_STLen)
+data   = array.new_float(n)
+labels = array.new_int(n)
+for i = 0 to n - 1
+    array.set(data, i, superTrend[i])
+    label_i = price[i] > sT[i] ? 1 : 0
+    array.set(labels, i, label_i)
+
+// Define a function to compute distance between two data points
+distance(x1, x2) =>
+    math.abs(x1 - x2)
+
+// Define the weighted k-nearest neighbors (KNN) function
+knn_weighted(data, labels, k, x) =>
+    n1 = array.size(data)
+    distances = array.new_float(n1)
+    indices   = array.new_int(n1)
+    // Compute distances from the current point to all other points
+    for i = 0 to n1 - 1
+        x_i = array.get(data, i)
+        dist = distance(x, x_i)
+        array.set(distances, i, dist)
+        array.set(indices, i, i)
+    // Sort distances and corresponding indices in ascending order
+    for i = 0 to n1 - 2
+        for j = 0 to n1 - i - 2
+            if array.get(distances, j) > array.get(distances, j + 1)
+                tempDist = array.get(distances, j)
+                array.set(distances, j, array.get(distances, j + 1))
+                array.set(distances, j + 1, tempDist)
+                tempIndex = array.get(indices, j)
+                array.set(indices, j, array.get(indices, j + 1))
+                array.set(indices, j + 1, tempIndex)
+    // Compute weighted sum of labels of the k nearest neighbors
+    weighted_sum = 0.
+    total_weight = 0.
+    for i = 0 to k - 1
+        index = array.get(indices, i)
+        label_i = array.get(labels, index)
+        weight_i = 1 / (array.get(distances, i) + 1e-6)
+        weighted_sum += weight_i * label_i
+        total_weight += weight_i
+    weighted_sum / total_weight
+
+// Classify the current data point
+current_superTrend = superTrend
+label_             = knn_weighted(data, labels, k, current_superTrend)
+
+// Plot
+col = label_ == 1 ? upCol : label_ == 0 ? dnCol : neCol
+plot(current_superTrend, color=col, title="Volume Super Trend AI")
+
+upTrend   = plot(superTrend == lowerBand ? current_superTrend : na, title="Up Volume Super Trend AI", color=col, style=plot.style_linebr)
+Middle    = plot((open + close) / 2, display=display.none, editable=false)
+downTrend = plot(superTrend == upperBand ? current_superTrend : na, title="Down Volume Super Trend AI", color=col, style=plot.style_linebr)
+fill_col  = color.new(col, 90)
+fill(Middle, upTrend, fill_col, fillgaps=false, title="Up Volume Super Trend AI")
+fill(Middle, downTrend, fill_col, fillgaps=false, title="Down Volume Super Trend AI")
+
+// Ai Super Trend Signals
+Start_TrendUp = col == upCol and (col[1] != upCol or col[1] == neCol) and aisignals
+Start_TrendDn = col == dnCol and (col[1] != dnCol or col[1] == neCol) and aisignals
+TrendUp       = direction == -1 and direction[1] == 1 and label_ == 1 and aisignals
+TrendDn       = direction == 1 and direction[1] == -1 and label_ == 0 and aisignals
+
+plotshape(Start_TrendUp ? superTrend : na, location=location.absolute, style=shape.circle, size=size.tiny, color=Bullish_col, title="AI Bullish Trend Start")
+plotshape(Start_TrendDn ? superTrend : na, location=location.absolute, style=shape.circle, size=size.tiny, color=Bearish_col, title="AI Bearish Trend Start")
+plotshape(TrendUp ? superTrend : na, location=location.absolute, style=shape.triangleup, size=size.small, color=Bullish_col, title="AI Bullish Trend Signal")
+plotshape(TrendDn ? superTrend : na, location=location.absolute, style=shape.triangledown, size=size.small, color=Bearish_col, title="AI Bearish Trend Signal")
+
+// Alerts
+alertcondition(Start_TrendUp, title="1 Bullish Trend Start", message="AI Bullish Trend Start")
+alertcondition(Start_TrendDn, title="2 Bearish Trend Start", message="AI Bearish Trend Start")
+alertcondition((Start_TrendUp or Start_TrendDn), title="3 Any Trend Start", message="Any AI Trend Start")
+alertcondition(TrendUp, title="4 Bullish Trend Signal", message="AI Bullish Trend Signal")
+alertcondition(TrendDn, title="5 Bearish Trend Signal", message="AI Bearish Trend Signal")
+alertcondition((TrendUp or TrendDn), title="6 Any Trend Signal", message="Any AI Trend Signal")
+
+// Indicadores adicionales para filtrar señales
+rsi = ta.rsi(source, rsiAverange)
+
+//adx = ta.adx(14)  // Corrigiendo ADX en PineScript v5
+len_dmi = input.int(17, minval=1, title="DI Length")
+lensig_dmi = input.int(14, title="ADX Smoothing", minval=1, maxval=50)
+[diplus, diminus, adx] = ta.dmi(len_dmi, lensig_dmi)
+
+// Calcular las medias móviles suavizadas
+lips = ta.sma(ta.sma(hl2, lengthLips), lengthLips)
+teeth = ta.sma(ta.sma(hl2, lengthTeeth), lengthTeeth)
+jaw = ta.sma(ta.sma(hl2, lengthJaw), lengthJaw)
+
+// Pintar las medias móviles con los offsets correspondientes
+plot(lips[offsetLips], title="Lips", color=color.white, linewidth=3)
+plot(teeth[offsetTeeth], title="Teeth", color=color.white, linewidth=2)
+plot(jaw[offsetJaw], title="Jaw", color=color.white, linewidth=1)
+
+// Dirección de la tendencia según las medias Alligator
+alligatorUpperTendence = lips > teeth and teeth > jaw
+alligatorLowerTendence = lips < teeth and teeth < jaw
+
+// GESTION MONETARIA
+// Para indicar si el único hilo de inversiones permitido está libre.
+//var bool buyThreadFree = true
+//var bool sellThreadFree = true
+
+// Variables para la detección de señales de compra/venta o la parada de las mismas.
+var bool closeLongEntry = false
+var bool closeShortEntry = false
+var bool longEntry = false
+var bool shortEntry = false
+
+
+// Variables para establecer nomenclatura de operaciones
+//var int longOpCount = 0
+//var int shortOpCount = 0
+var string longOpName = "Long"
+var string shortOpName = "Short"
+
+//if (year == 2024 and month == 7 and dayofmonth >= 6 and dayofmonth <= 7)
+if (true)
+
+    // Condiciones para el cierre de operaciones
+    closeLongEntry := (Start_TrendDn or TrendDn) and adx > adxLevel and rsi < rsiHighLevel
+    closeShortEntry := (Start_TrendUp or TrendUp) and adx > adxLevel and rsi > rsiLowLevel
+
+    //if (closeLongEntry)
+        //strategy.close(longOpName)
+        //buyThreadFree := true
+    //if (closeShortEntry)
+        //strategy.close(shortOpName)
+        //sellThreadFree := true
+
+    // Condiciones para la apertura de operaciones
+    longEntry := (Start_TrendUp or TrendUp) and adx > adxLevel and rsi > rsiLowLevel and alligatorUpperTendence
+    shortEntry := (Start_TrendDn or TrendDn) and adx > adxLevel and rsi < rsiHighLevel and alligatorLowerTendence
+
+    if (longEntry)
+        //longOpCount += 1
+        //longOpName := "Long" + str.tostring(longOpCount)
+        stopLossPrize = source - (source * (stopLossPercent / 100))
+        takeProfitPrize = source + (source * (takeProfitPercent / 100))
+        strategy.entry(longOpName, strategy.long)
+        strategy.exit(longOpName + "Exit", longOpName, stop=stopLossPrize, limit=takeProfitPrize)
+    if (shortEntry)
+        //shortOpCount += 1
+        //shortOpName := "Short" + str.tostring(shortOpCount)
+        stopLossPrize = source + (source * (stopLossPercent / 100))
+        takeProfitPrize = source - (source * (takeProfitPercent / 100))
+        strategy.entry(shortOpName, strategy.short)
+        strategy.exit(shortOpName + "Exit", shortOpName, stop=stopLossPrize, limit=takeProfitPrize)

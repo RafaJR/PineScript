@@ -1,0 +1,64 @@
+//@version=5
+strategy(title="ParabolicSARStrategy", shorttitle="ParabolicSARStrategy", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.1, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD)
+
+// 1D - ETHEREUM ALL TIME HISTORY INDEX
+
+// Colors for both moving averages
+colorLong = #00ff08  // Green for bullish movements
+colorShort = #ff0000 // Red for bearish movements
+fillColorLong = color.new(colorLong, 70)
+fillColorShort = color.new(colorShort, 70)
+fillBullishDivergenceColor = color.new(colorLong, 90)
+fillBearishDivergenceColor = color.new(colorShort, 90)
+hidden = color.new(color.black, 100)
+
+// General inputs
+source = input.source(close, title="Prize data source", group="General configuration", group="General")
+
+// SAR inputs
+start = input.float(0.02, title="Start", group="SAR")
+increment = input(0.02, title="Increment", group="SAR")
+maximum = input(0.2, "Max Value", title="Maximun", group="SAR")
+
+// EMA inputs
+slowEmaPeriod = input.int(200, title="Media móbi lenta", minval=1, step=10, inline="Slow EMA", group="EMA")
+
+// StopLoss / TakeProffit percents
+stopLossPercent = input(1, title="Porcentaje de Stop Loss (%)", group="Risk control")
+takeProfitPercent = input(10, title="Porcentaje de Take Profit (%)", group="Risk control")
+
+out = ta.sar(start, increment, maximum)
+
+sarIsBullish = out < source
+sarIsBearish = out > source
+sarColor = sarIsBearish ?  colorShort : colorLong
+sarWasBullish = sarIsBearish and out[1] < source[1]
+sarWasBearish = sarIsBullish and out[1] > source[1]
+
+sarPlot = plot(out, "ParabolicSAR", style=plot.style_stepline, color=sarColor)
+sourcePlot = plot(source, "ParabolicSAR", color=hidden)
+
+slowEma = ta.wma(source, slowEmaPeriod)
+slowEmaIsBullish = slowEma < source
+slowEmaIsBearish = slowEma > source
+emaColor = slowEmaIsBullish ? colorLong : colorShort
+emaPlot = plot(slowEma, "EMA", color=emaColor, linewidth=2)
+
+prizeIsBullish = sarIsBullish and slowEmaIsBullish
+prizeIsBearish = sarIsBearish and slowEmaIsBearish
+prizeIsBullishDivergent = slowEmaIsBullish and sarIsBearish
+prizeIsBearishDivergent = slowEmaIsBearish and sarIsBullish
+
+fillColor = prizeIsBullish ? fillColorLong : prizeIsBearish ? fillColorShort : prizeIsBullishDivergent ? fillBullishDivergenceColor : fillBearishDivergenceColor
+fill(sarPlot, sourcePlot, fillColor, fillgaps=true)
+
+colorLongOrder = color.new(colorLong, 60)
+colorShortOrder = color.new(colorShort, 60)
+
+//***************************************************************************************************************************************************************
+// Operation orders
+//***************************************************************************************************************************************************************
+var bool killLongEntry = false
+var bool killShortEntry = false
+var bool longEntry = false
+var bool shortEntry = false

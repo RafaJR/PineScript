@@ -1,0 +1,185 @@
+//@version=5
+strategy("JurikBasedStrategy", shorttitle="Jurik averange based strategy", overlay=true, pyramiding=0,
+         calc_on_order_fills=false, commission_type=strategy.commission.percent,
+         commission_value=0.1, default_qty_type=strategy.percent_of_equity, default_qty_value=100,
+         initial_capital=1000, currency=currency.USD)
+
+// 1H - ETHEREUM ALL TIME HISTORY INDEX
+
+// StopLoss / TakeProffit percents
+stopLossPercent = input.float(defval=3.7, title="Static Stop Loss Percent (%)", step=0.1, group="Risk control")
+takeProfitPercent = input.float(defval=32.7, title="Static Take Profit Percent (%)", step=0.1, group="Risk control")
+
+// Jurik Moving Average
+length = input.int(title="Length", defval=6, minval=1)
+phase = input.int(title="Phase", defval=50, minval=-100, maxval=100)
+power = input.int(title="Power", defval=2, minval=1)
+src = input.source(defval=close, title="Source")
+
+// ADX Configuration
+adxLevel = input.int(13, inline="ADX Level", group="ADX")
+len_dmi = input.int(15, minval=1, title="DI Length", group="ADX")
+lensig_dmi = input.int(17, title="ADX Smoothing", minval=1, maxval=50, group="ADX")
+[diplus, diminus, adx] = ta.dmi(len_dmi, lensig_dmi)
+
+isAdxStrong =  adx > adxLevel
+
+var color bullishColor = #00ff08
+var color bearishColor = #ff0404
+
+// Slow EMA inputs
+slowEmaAverage = input.int(defval=26, step=1, group="EMAs")
+
+// RSI Configuration
+rsiAverange = input.int(2,inline="RSI Averange", group="Complementary indicators")
+rsiLowLevel = input.int(44,inline="RSI level", group="Complementary indicators")
+rsiHighLevel = input.int(53,inline="RSI level", group="Complementary indicators")
+// RSI Calculation
+rsi = ta.rsi(src, rsiAverange)
+
+// Slow EMA
+slowEma = ta.wma(src, slowEmaAverage)
+
+// phaseRatio - beta - alpha
+phaseRatio = phase < -100 ? 0.5 : phase > 100 ? 2.5 : phase / 100 + 1.5
+beta = 0.45 * (length - 1) / (0.45 * (length - 1) + 2)
+alpha = math.pow(beta, power)
+
+// Calculation vars
+var float jma = na
+var float e0 = na
+var float e1 = na
+var float e2 = na
+
+// Jurik Moving Average calculation
+e0 := (1 - alpha) * src + alpha * nz(e0[1])
+e1 := (src - e0) * (1 - beta) + beta * nz(e1[1])
+e2 := (e0 + phaseRatio * e1 - nz(jma[1])) * math.pow(1 - alpha, 2) + math.pow(alpha, 2) * nz(e2[1])
+jma := e2 + nz(jma[1])
+
+// jma stats and colors
+jmaColor = color.white
+
+bool trendIsBullish = jma > jma[1]
+bool trendIsBearish = jma < jma[1]
+
+// Plotting
+// JMA ploting
+if trendIsBullish
+    jmaColor := bullishColor
+else if trendIsBearish
+    jmaColor := bearishColor
+
+var jmaPlot = plot(jma, title="JMA", linewidth=1, color=color.new(jmaColor, 0))
+
+// Slow EMA ploting
+var color slowEmaColor = color.white
+var color jmaEmaFillColor = color.white
+slowEmaIsBullish = slowEma < jma
+slowEmaIsBearish = slowEma > jma
+
+if (slowEmaIsBullish)
+    slowEmaColor := bullishColor
+    jmaEmaFillColor := color.new(bullishColor, 80)
+if (slowEmaIsBearish)
+    slowEmaColor := bearishColor
+    jmaEmaFillColor := color.new(bearishColor, 80)
+var slowEmaPlot = plot(slowEma, title="Slow EMA", linewidth=2, color=slowEmaColor)
+
+// Variables to detect divergence and store extreme prices
+var bool divergenceBullish = false  // Divergence: Jurik is bullish, and EMA is bearish
+var bool divergenceBearish = false  // Divergence: Jurik is bearish, and EMA is bullish
+var bool anyDivergenge = false
+
+// Detect divergence
+divergenceBullish := slowEma < jma and trendIsBearish
+divergenceBearish := slowEma > jma and trendIsBullish
+anyDivergenge := divergenceBullish or divergenceBearish
+
+// Variables to store extreme prices and their respective bar index
+var float highestInBearish = na    // Stores the highest price in bearish divergence
+var int highestInBearishIndex = na // Stores the index of the lowest price in berish divergence
+var float lowestInBullish = na     // Stores the lowest price in bullish divergence
+var int lowestInBullishIndex = na  // Stores the index of the highest price in bullish divergence
+var int divergenceBullishCount = 0
+var int divergenceBearishCount = 0
+
+// Detect price extremes in divergence zones
+if (divergenceBullish)
+    jmaEmaFillColor := color.new(bullishColor, 95)
+    // Update the highest price and its index in bullish divergence zone
+    if na(lowestInBullish) or low < lowestInBullish
+        lowestInBullish := low
+        lowestInBullishIndex := bar_index  // Save the index of the extreme price
+        divergenceBullishCount += 1
+if (divergenceBearish)
+    jmaEmaFillColor := color.new(bearishColor, 95)
+    // Update the lowest price and its index in bearish divergence zone
+    if na(highestInBearish) or high > highestInBearish
+        highestInBearish := high
+        highestInBearishIndex := bar_index  // Save the index of the extreme price
+        divergenceBearishCount += 1
+
+fill(slowEmaPlot, jmaPlot, jmaEmaFillColor, fillgaps=true)
+// Restarting variables when divergence ends
+
+if (slowEmaIsBullish and not divergenceBullish)
+    lowestInBullish := na
+    lowestInBullishIndex := na
+if (slowEmaIsBearish and not divergenceBearish)
+    highestInBearish := na
+    highestInBearishIndex := na
+
+//*********************************************************************************************
+// Operational
+//*********************************************************************************************
+longEntry = isAdxStrong and trendIsBullish and slowEmaIsBullish and rsi > rsiLowLevel
+shortEntry = isAdxStrong and trendIsBearish and slowEmaIsBearish and rsi < rsiHighLevel
+killLongEntry = ta.crossover(slowEma, jma)
+killShortEntry = ta.crossunder(slowEma, jma)
+var bool operationalBusy = false
+
+currentYear = input.int(defval=2024, step=1)
+currentMonth = input.int(defval=1, step=1)
+//if (year == 2024 and month == 1 and dayofmonth >= 6 and dayofmonth <= 7)
+//if (year == 2025 and month == 4)
+//if(year ==  currentYear)
+//if(year == currentYear and month == currentMonth)
+if (true)
+    // Operation nomenclature variables
+    var int longOpCount = 0
+    var int shortOpCount = 0
+    var string longOpName = ""
+    var string shortOpName = ""
+
+    if(killLongEntry)
+        strategy.close(id=longOpName)
+        operationalBusy := false
+    if(killShortEntry)
+        strategy.close(id=shortOpName)
+        operationalBusy := false
+    if (longEntry and not operationalBusy)
+        longOpCount += 1
+        longOpName := "Long"
+        longOpComment = longOpName + str.tostring(longOpCount)
+        strategy.entry(id=longOpName, direction=strategy.long, comment=longOpComment)
+        stopLossPrize = strategy.position_avg_price * (1 - stopLossPercent / 100)
+        takeProfitPrize = strategy.position_avg_price * (1 + takeProfitPercent / 100)
+        strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "PROFIT" + str.tostring(longOpCount))
+        operationalBusy := true
+    if (shortEntry and not operationalBusy)
+        shortOpCount += 1
+        shortOpName := "Short"
+        shortOpComment = shortOpName + str.tostring(shortOpCount)
+        strategy.entry(id=shortOpName, direction=strategy.short, comment=shortOpComment)
+        stopLossPrize = strategy.position_avg_price * (1 + stopLossPercent / 100)
+        takeProfitPrize = strategy.position_avg_price * (1 - takeProfitPercent / 100)
+        strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount))
+        operationalBusy := true
+    if (strategy.position_size == 0)
+        operationalBusy := false
+    // The stop loss is updatated to the min/max price found at last divergence
+    if (not na(lowestInBullish) and operationalBusy and slowEmaIsBullish and not divergenceBearish)
+        strategy.exit(id=longOpName, from_entry=longOpName, stop=lowestInBullish, comment="USL to " + str.tostring(lowestInBullish))
+    if (not na(highestInBearish) and operationalBusy and slowEmaIsBearish and not divergenceBullish)
+        strategy.exit(id=shortOpName, from_entry=shortOpName, stop=highestInBearish, comment="USL to " + str.tostring(highestInBearish))

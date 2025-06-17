@@ -1,0 +1,96 @@
+//@version=5
+strategy(title="SimpleADXStrategy", shorttitle="Estrategia simple basada ADX - a 1 día", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.1, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD)
+
+// Parámetros RSI
+rsiAverange = input.int(8,inline="RSI Averange", group="Complementary indicators")
+rsiLowLevel = input.int(26,inline="RSI level", group="Complementary indicators")
+rsiHighLevel = input.int(26,inline="RSI level", group="Complementary indicators")
+
+// Parámetros ADX
+adxLevel = input.int(3, inline="ADX Level", group="Complementary indicators")
+adxOutLevel = input.int(5, inline="ADX Out Level", group="Complementary indicators")
+maSrc  = input.string("WMA","Moving Average Source",["SMA","EMA","WMA","RMA","VWMA"],inline="", group="Super Trend Settings")
+
+// Averange settings
+averagePeriods = input.int(6, title="Average periods")
+tendenceCalculatorFactor = input.int(9, title="Tendence calculator factor")
+
+//adx = ta.adx(14)  // Corrigiendo ADX en PineScript v5
+len_dmi = input.int(18, minval=1, title="DI Length")
+lensig_dmi = input.int(1, title="ADX Smoothing", minval=1, maxval=50)
+[diplus, diminus, adx] = ta.dmi(len_dmi, lensig_dmi)
+
+// StopLoss / TakeProffit percents
+stopLossPercent = input(24, title="Porcentaje de Stop Loss (%)")
+takeProfitPercent = input(8, title="Porcentaje de Take Profit (%)")
+
+rsi = ta.rsi(close, rsiAverange)
+
+// Calcular las medias móviles suavizadas
+highAverage = ta.sma(high, averagePeriods)
+lowAverage = ta.sma(low, averagePeriods)
+slowAverage = ta.sma(hl2, averagePeriods * tendenceCalculatorFactor)
+
+// Cálculo de la tendencia
+bullTendence = slowAverage < lowAverage
+bearTendence = slowAverage > highAverage
+
+// Asignación de colores para el gráfico
+tendenceColor = #ffffff00
+tendenceFillColor = #ffffff00
+if (adx > adxLevel)
+    if (bullTendence and rsi > rsiLowLevel)
+        tendenceColor := color.green
+        tendenceFillColor := #beffc033
+    else if (bearTendence and rsi < rsiHighLevel)
+        tendenceColor := color.red
+        tendenceFillColor := #ffadad33
+
+highAveragePlot = plot(highAverage, title="High average", color=tendenceColor, linewidth=2)
+lowAveragePlot = plot(lowAverage, title="Low average", color=tendenceColor, linewidth=2)
+plot(slowAverage, title="Slow Average", color=#ffffff00, linewidth=2)
+fill(highAveragePlot, lowAveragePlot, tendenceFillColor, fillgaps=true)
+
+
+// GESTION MONETARIA
+// Para indicar si el único hilo de inversiones permitido está libre.
+//var bool buyThreadFree = true
+//var bool sellThreadFree = true
+
+// Variables para la detección de señales de compra/venta o la parada de las mismas.
+var bool closeLongEntry = false
+var bool closeShortEntry = false
+var bool longEntry = false
+var bool shortEntry = false
+
+
+// Variables para establecer nomenclatura de operaciones
+//var int longOpCount = 0
+//var int shortOpCount = 0
+var string longOpName = "Long"
+var string shortOpName = "Short"
+
+//if (year == 2024 and month == 12 and dayofmonth >= 11 and dayofmonth <= 12)
+//if (year == 2024 and month == 12)
+if (true)
+    // Condiciones para la apertura de operaciones
+    longEntry := bullTendence and adx > adxLevel and rsi > rsiLowLevel
+    shortEntry := bearTendence and adx > adxLevel and rsi < rsiHighLevel
+
+    closeLongEntry := not bullTendence or not (adx > adxLevel)
+    closeShortEntry := not bearTendence or not (adx > adxLevel)
+
+    if (longEntry)
+        stopLossPrize = close * (1 - stopLossPercent / 100)
+        takeProfitPrize = close * (1 + takeProfitPercent / 100)
+        strategy.entry(longOpName, strategy.long)
+        strategy.exit(longOpName + "Exit", longOpName, stop=stopLossPrize, limit=takeProfitPrize)
+    if (shortEntry)
+        stopLossPrize = close * (1 + stopLossPercent / 100)
+        takeProfitPrize = close * (1 - takeProfitPercent / 100)
+        strategy.entry(shortOpName, strategy.short)
+        strategy.exit(shortOpName + "Exit", shortOpName, stop=stopLossPrize, limit=takeProfitPrize)
+    if (closeLongEntry)
+        strategy.close(longOpName)
+    if (closeShortEntry)
+        strategy.close(shortOpName)

@@ -1,0 +1,96 @@
+//@version=5
+strategy(title="SupportAndResistanceBasedStrategy", shorttitle="Estrategia basada Soportes y Resistencias dinámicas", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.1, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD)
+// Nota: aplicar a escala de 1 minuto
+
+// Opciones configurables
+bars = input.int(13, title="Left and Right Bars", group="Pivot levels")
+volumeThresh = input.int(20, title="Volume Threshold", group="Pivot levels")
+supportOrResistanceRange = input.float(0.006, step=0.01, title="Range for support or resistance levels", group="Pivot levels")
+averagePeriods = input.int(5, title="Average periods", group="Tendence calculation")
+slowAveragePeriods = input.int(23, title="Slow average periods", group="Tendence calculation")
+adxLevel = input.int(11, title="ADX level", group="ADX calculation")
+adxOutLevel = input.int(5, title="ADX out level", group="ADX calculation")
+len_dmi = input.int(17, minval=1, title="DI Length", group="ADX calculation")
+lensig_dmi = input.int(14, title="ADX Smoothing", minval=1, group="ADX calculation")
+
+// Colores para soporte y resistencia
+supporColor = #ff0000
+resistanceColor = #00ff08
+supportRangeColor = #00ff0867
+resistanceRangeColor = #ff00006b
+highRangeColor = #00ff0825
+lowRangeColor = #ff00001f
+hidden = #ffffff00
+
+// Detección de los pivotes altos y bajos (con valores nulos reemplazados por 0)
+highUsePivot = ta.pivothigh(bars, bars)[1]
+lowUsePivot = ta.pivotlow(bars, bars)[1]
+
+// Cálculo de las medias de los puntos justo por encima y por debajo de los pivotes
+highUsePivotAbove = highUsePivot + highUsePivot * supportOrResistanceRange
+highUsePivotBelow = highUsePivot - highUsePivot * supportOrResistanceRange
+lowUsePivotAbove = lowUsePivot + lowUsePivot * supportOrResistanceRange
+lowUsePivotBelow = lowUsePivot - lowUsePivot * supportOrResistanceRange
+
+// Graficar niveles de soporte y resistencia
+plotHighUsePivot = plot(highUsePivot, color=supporColor, linewidth=1, offset=-(bars+1), title="Resistance")
+plotResistanceColor = plot(lowUsePivot, color=resistanceColor, linewidth=1, offset=-(bars+1), title="Support")
+plothighUsePivotAbove = plot(highUsePivotAbove, color=hidden, linewidth=1, offset=-(bars+1), title="Support")
+plothighUsePivotBelow = plot(highUsePivotBelow, color=hidden, linewidth=1, offset=-(bars+1), title="Support")
+plotLowUsePivotAbove = plot(lowUsePivotAbove, color=hidden, linewidth=1, offset=-(bars+1), title="Support")
+plotLowUsePivotBelow = plot(lowUsePivotBelow, color=hidden, linewidth=1, offset=-(bars+1), title="Support")
+fill(plothighUsePivotAbove, plothighUsePivotBelow, resistanceRangeColor, fillgaps=true)
+fill(plotLowUsePivotAbove, plotLowUsePivotBelow, supportRangeColor, fillgaps=true)
+
+// Cálculo de precio actual máximo y mínimo
+highAverage = ta.sma(high, averagePeriods)
+mediumAverage = ta.sma(hl2, averagePeriods)
+lowAverage = ta.sma(low, averagePeriods)
+plotHighAverage = plot(highAverage, color=resistanceColor, linewidth=1, title="High")
+plotMediumAverage = plot(mediumAverage, color=hidden, linewidth=1, title="Medium")
+plotLowAverage = plot(lowAverage, color=supporColor, linewidth=1, title="Low")
+fill(plotHighAverage, plotMediumAverage, color=highRangeColor, fillgaps=true)
+fill(plotLowAverage, plotMediumAverage, color=lowRangeColor, fillgaps=true)
+
+// Cálculo de tendencia
+slowAverage = ta.sma(hl2, slowAveragePeriods)
+plotSlowAverage = plot(slowAverage, color=color.white, linewidth = 2, title = "Slow average")
+[diplus, diminus, adx] = ta.dmi(len_dmi, lensig_dmi)
+var bool upperTendence = false
+var bool lowerTendence = false
+var bool checkTendenceStrench = false
+
+// Variables para la detección de señales de compra/venta o la parada de las mismas.
+var bool closeLongEntry = false
+var bool closeShortEntry = false
+var bool longEntry = false
+var bool shortEntry = false
+
+var longOpName = "Buy"
+var shortOpName = "Sell"
+
+if (true)
+    // Condiciones para la apertura de operaciones
+    upperTendence := mediumAverage < slowAverage
+    lowerTendence := mediumAverage > slowAverage
+    checkTendenceStrench := adx > adxLevel
+
+    longEntry := upperTendence and ta.crossunder(lowAverage, lowUsePivotAbove) and checkTendenceStrench
+    shortEntry := lowerTendence and ta.crossover(highAverage, highUsePivotBelow) and checkTendenceStrench
+    closeLongEntry := ta.crossunder(lowAverage, lowUsePivotBelow) or ta.crossover(highAverage, highUsePivotBelow)
+    closeShortEntry := ta.crossover(highAverage, highUsePivotAbove) or ta.crossunder(lowAverage, lowUsePivotAbove)
+
+    if(closeLongEntry)
+        strategy.close(longOpName)
+    if(closeShortEntry)
+        strategy.close(shortOpName)
+    if(longEntry)
+        strategy.entry(longOpName, strategy.long)
+    if(shortEntry)
+        strategy.entry(shortOpName, strategy.short)
+
+// Agregar flecha hacia abajo si longEntry = true
+//plotshape(series=longEntry, style=shape.triangleup, location=location.belowbar, color=resistanceColor, size=size.tiny, title="Buy", text="Buy")
+
+// Agregar flecha hacia arriba si shortEntry = true
+//plotshape(series=shortEntry, style=shape.triangledown, location=location.abovebar, color=supporColor, size=size.tiny, title="Sell", text="Sell")

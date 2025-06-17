@@ -1,0 +1,108 @@
+//@version=6
+strategy(title="BollingerBandsStrategy", shorttitle="Estrategia basada en Bandas de Bollinger", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.1, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD)
+// Aplicar a escala de 1 hora
+
+// Configuración de entrada
+source = input.source(close)
+length = input.int(9, minval=1, step=1, title="Bollinguer averange", group = "Bollinger bands")
+maType = input.string("SMA", "Basis MA Type", options = ["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group = "Bollinger bands")
+src = input(close, title="Source", group = "Bollinger bands")
+mult = input.float(2.0, minval=0.001, maxval=50, step=0.001, title="StdDev", group = "Bollinger bands")
+slowAveragePeriods = input.int(19, title="Slow average periods", group="Tendence calculation")
+averagePeriods = input.int(4, title="Average periods", group="Tendence calculation")
+adxLevel = input.int(42, title="ADX level", group="ADX calculation")
+adxOutLevel = input.int(5, title="ADX out level", group="ADX calculation")
+len_dmi = input.int(18, minval=1, title="DI Length", group="ADX calculation")
+lensig_dmi = input.int(12, title="ADX Smoothing", minval=1, group="ADX calculation")
+
+// StopLoss / TakeProffit percents
+stopLossPercent = input(9, title="Porcentaje de Stop Loss (%)", group="Risk control")
+takeProfitPercent = input(9, title="Porcentaje de Take Profit (%)", group="Risk control")
+
+ma(source, length, _type) =>
+    switch _type
+        "SMA" => ta.sma(source, length)
+        "EMA" => ta.ema(source, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+
+basis = ma(src, length, maType)
+dev = mult * ta.stdev(src, length)
+upper = basis + dev
+lower = basis - dev
+offset = input.int(0, "Offset", minval = -500, maxval = 500, display = display.data_window)
+upperPrizesColor = #8fff6046
+lowerPrizesColor = #ff5b5b50
+hidden = #ffffff00
+// Colores para soporte y resistencia
+supporColor = #ff0000
+resistanceColor = #00ff08
+
+basisPrizesPlot = plot(basis, "Basis", color=hidden, offset = offset)
+upperPrizesPlot = plot(upper, "Upper", color=hidden, offset = offset)
+lowerPrizesPlot = plot(lower, "Lower", color=hidden, offset = offset)
+fill(upperPrizesPlot, basisPrizesPlot, title = "Upper prizes band", color=upperPrizesColor)
+fill(lowerPrizesPlot, basisPrizesPlot, title = "Lower prizes band", color=lowerPrizesColor)
+
+// Cálculo de tendencia
+slowAverage = ta.sma(hl2, slowAveragePeriods)
+plotSlowAverage = plot(slowAverage, color=color.white, linewidth = 2, title = "Slow average")
+[diplus, diminus, adx] = ta.dmi(len_dmi, lensig_dmi)
+var bool upperTendence = false
+var bool lowerTendence = false
+var bool checkTendenceStrench = false
+
+// Cálculo de precio actual máximo y mínimo
+highAverage = ta.sma(high, averagePeriods)
+mediumAverage = ta.sma(hl2, averagePeriods)
+lowAverage = ta.sma(low, averagePeriods)
+plotHighAverage = plot(highAverage, color=resistanceColor, linewidth=1, title="High")
+plotMediumAverage = plot(mediumAverage, color=hidden, linewidth=1, title="Medium")
+plotLowAverage = plot(lowAverage, color=supporColor, linewidth=1, title="Low")
+
+// Variables para la detección de señales de compra/venta o la parada de las mismas.
+var bool closeLongEntry = false
+var bool closeShortEntry = false
+var bool longEntry = false
+var bool shortEntry = false
+var bool longSinalEvent = false
+var bool shortSinalEvent = false
+
+var longOpName = "Buy"
+var shortOpName = "Sell"
+
+if (true)
+    upperTendence := basis > slowAverage
+    lowerTendence := basis < slowAverage
+    checkTendenceStrench := adx > adxLevel
+    longSinalEvent := ta.crossunder(lowAverage, basis)
+    shortSinalEvent := ta.crossover(highAverage, basis)
+
+    closeLongEntry := ta.crossunder(lowAverage, basis)
+    closeShortEntry := ta.crossover(highAverage, basis)
+    longEntry := upperTendence and checkTendenceStrench and longSinalEvent
+    shortEntry := lowerTendence and checkTendenceStrench and shortSinalEvent
+
+    //if(closeLongEntry)
+    //    strategy.close(longOpName)
+    //if(closeShortEntry)
+    //    strategy.close(shortOpName)
+    if(longEntry)
+        stopLossPrize = source - (source * (stopLossPercent / 100))
+        takeProfitPrize = source + (source * (takeProfitPercent / 100))
+        strategy.entry(longOpName, strategy.long)
+        strategy.exit(longOpName + "Exit", longOpName, stop=stopLossPrize, limit=takeProfitPrize)
+    if(shortEntry)
+        stopLossPrize = source + (source * (stopLossPercent / 100))
+        takeProfitPrize = source - (source * (takeProfitPercent / 100))
+        strategy.entry(shortOpName, strategy.short)
+        strategy.exit(shortOpName + "Exit", shortOpName, stop=stopLossPrize, limit=takeProfitPrize)
+
+// Agregar flecha hacia abajo si longEntry = true
+//plotshape(series=longEntry, style=shape.triangleup, location=location.belowbar, color=resistanceColor, size=size.tiny, title="Buy", text="Buy")
+//plotshape(series=closeLongEntry, style=shape.xcross, location=location.belowbar, color=resistanceColor, size=size.normal, title="CloseBuy", text="CloseBuy")
+
+// Agregar flecha hacia arriba si shortEntry = true
+//plotshape(series=shortEntry, style=shape.triangledown, location=location.abovebar, color=supporColor, size=size.tiny, title="Sell", text="Sell")
+//plotshape(series=closeShortEntry, style=shape.xcross, location=location.abovebar, color=supporColor, size=size.normal, title="CloseSell", text="CloseSell")
