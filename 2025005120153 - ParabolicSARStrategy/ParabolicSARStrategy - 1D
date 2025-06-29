@@ -14,46 +14,84 @@ hidden = color.new(color.black, 100)
 
 // General inputs
 source = input.source(close, title="Prize data source", group="General configuration", group="General")
-
 // SAR inputs
 start = input.float(0.02, title="Start", group="SAR")
 increment = input(0.02, title="Increment", group="SAR")
 maximum = input(0.2, "Max Value", title="Maximun", group="SAR")
-
 // EMA inputs
 slowEmaPeriod = input.int(200, title="Media móbi lenta", minval=1, step=10, inline="Slow EMA", group="EMA")
-
 // StopLoss / TakeProffit percents
 stopLossPercent = input(1, title="Porcentaje de Stop Loss (%)", group="Risk control")
 takeProfitPercent = input(10, title="Porcentaje de Take Profit (%)", group="Risk control")
 
+//***************************************************************************************************************************************************************
+// General funtions
+//***************************************************************************************************************************************************************
+adjustCurrentHighest(bool sarIsBullish, bool sarBecomeBullish, float currentHighest) =>
+    if (not sarIsBullish)
+        currentHighest
+    if (sarIsBullish and sarBecomeBullish)
+        high
+    else if (sarIsBullish and not sarBecomeBullish)
+        high > currentHighest ? high : currentHighest
+
+adjustCurrentLower(bool sarIsBearish, bool sarBecomeBearish, float currentLowest) =>
+    if (not sarIsBearish)
+        currentLowest
+    if (sarIsBearish and sarBecomeBearish)
+        low
+    else if (sarIsBearish and not sarBecomeBearish)
+        low < currentLowest ? low : currentLowest
+
+//***************************************************************************************************************************************************************
+// Chart calculations (SAR, EMAs, Top prizes)
+//***************************************************************************************************************************************************************
 out = ta.sar(start, increment, maximum)
 
+// SAR indicates a Bullish trend
 sarIsBullish = out < source
+// SAR Indicates a Bearish trend
 sarIsBearish = out > source
+// Setting the SAR Color according to trend
 sarColor = sarIsBearish ?  colorShort : colorLong
-sarWasBullish = sarIsBearish and out[1] < source[1]
-sarWasBearish = sarIsBullish and out[1] > source[1]
-
-sarPlot = plot(out, "ParabolicSAR", style=plot.style_stepline, color=sarColor)
-sourcePlot = plot(source, "ParabolicSAR", color=hidden)
+// A new SAR tendence just started
+sarBecomeBearish = sarIsBearish and out[1] < source[1]
+sarBecomeBullish = sarIsBullish and out[1] > source[1]
 
 slowEma = ta.wma(source, slowEmaPeriod)
 slowEmaIsBullish = slowEma < source
 slowEmaIsBearish = slowEma > source
 emaColor = slowEmaIsBullish ? colorLong : colorShort
-emaPlot = plot(slowEma, "EMA", color=emaColor, linewidth=2)
 
 prizeIsBullish = sarIsBullish and slowEmaIsBullish
 prizeIsBearish = sarIsBearish and slowEmaIsBearish
 prizeIsBullishDivergent = slowEmaIsBullish and sarIsBearish
 prizeIsBearishDivergent = slowEmaIsBearish and sarIsBullish
 
+//***************************************************************************************************************************************************************
+// Top prices calculation
+//***************************************************************************************************************************************************************
+
+float currentHighest = na
+float currentLowest = na
+
+currentHighest := adjustCurrentHighest(sarIsBullish, sarBecomeBullish, currentHighest)
+currentLowest := adjustCurrentLower(sarIsBearish, sarBecomeBearish, currentLowest)
+
+//***************************************************************************************************************************************************************
+// Chart printing
+//***************************************************************************************************************************************************************
+
+sarPlot = plot(out, "ParabolicSAR", style=plot.style_stepline, color=sarColor)
+sourcePlot = plot(source, "ParabolicSAR", color=hidden)
+emaPlot = plot(slowEma, "EMA", color=emaColor, linewidth=2)
+
 fillColor = prizeIsBullish ? fillColorLong : prizeIsBearish ? fillColorShort : prizeIsBullishDivergent ? fillBullishDivergenceColor : fillBearishDivergenceColor
 fill(sarPlot, sourcePlot, fillColor, fillgaps=true)
 
-colorLongOrder = color.new(colorLong, 60)
-colorShortOrder = color.new(colorShort, 60)
+if (sarBecomeBearish)
+    label.new(x=bar_index, y=high, text=str.tostring(currentHighest), style=label.style_label_down, color=fillColorLong, textcolor=color.white)
+
 
 //***************************************************************************************************************************************************************
 // Operation orders
@@ -62,3 +100,4 @@ var bool killLongEntry = false
 var bool killShortEntry = false
 var bool longEntry = false
 var bool shortEntry = false
+
