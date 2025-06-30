@@ -27,21 +27,23 @@ takeProfitPercent = input(10, title="Porcentaje de Take Profit (%)", group="Risk
 //***************************************************************************************************************************************************************
 // General funtions
 //***************************************************************************************************************************************************************
-adjustCurrentHighest(bool sarIsBullish, bool sarBecomeBullish, float currentHighest) =>
+adjustCurrentHighest(float currentHighest) =>
+    math.max(high, currentHighest)
+findCurrentHighestIndex(bool sarIsBullish, bool sarBecomeBullish, float currentHighest, int highestIndex) =>
     if (not sarIsBullish)
-        currentHighest
-    if (sarIsBullish and sarBecomeBullish)
-        high
+        highestIndex
+    else if (sarBecomeBullish)
+        bar_index
     else if (sarIsBullish and not sarBecomeBullish)
-        high > currentHighest ? high : currentHighest
+        high > currentHighest ? bar_index : highestIndex
 
 adjustCurrentLower(bool sarIsBearish, bool sarBecomeBearish, float currentLowest) =>
     if (not sarIsBearish)
         currentLowest
-    if (sarIsBearish and sarBecomeBearish)
+    else if (sarBecomeBearish)
         low
     else if (sarIsBearish and not sarBecomeBearish)
-        low < currentLowest ? low : currentLowest
+        math.min(low, currentLowest)
 
 //***************************************************************************************************************************************************************
 // Chart calculations (SAR, EMAs, Top prizes)
@@ -72,11 +74,15 @@ prizeIsBearishDivergent = slowEmaIsBearish and sarIsBullish
 // Top prices calculation
 //***************************************************************************************************************************************************************
 
-float currentHighest = na
+var float currentHighest = 0
 float currentLowest = na
+int currentHighestIndex = 0
 
-currentHighest := adjustCurrentHighest(sarIsBullish, sarBecomeBullish, currentHighest)
+if(sarIsBullish)
+    currentHighest := adjustCurrentHighest(currentHighest)
+
 currentLowest := adjustCurrentLower(sarIsBearish, sarBecomeBearish, currentLowest)
+currentHighestIndex := findCurrentHighestIndex(sarIsBullish, sarBecomeBullish, currentHighest, currentHighestIndex)
 
 //***************************************************************************************************************************************************************
 // Chart printing
@@ -89,9 +95,10 @@ emaPlot = plot(slowEma, "EMA", color=emaColor, linewidth=2)
 fillColor = prizeIsBullish ? fillColorLong : prizeIsBearish ? fillColorShort : prizeIsBullishDivergent ? fillBullishDivergenceColor : fillBearishDivergenceColor
 fill(sarPlot, sourcePlot, fillColor, fillgaps=true)
 
-if (sarBecomeBearish)
-    label.new(x=bar_index, y=high, text=str.tostring(currentHighest), style=label.style_label_down, color=fillColorLong, textcolor=color.white)
-
+//if (sarBecomeBearish)
+label.new(x=bar_index, y=high, text=str.tostring(currentHighest), style=label.style_triangledown, color=colorLong, textcolor=color.white, size = size.normal)
+//if(sarBecomeBullish)
+//    label.new(x=bar_index, y=low, text=str.tostring(currentLowest), style=label.style_triangleup, color=colorShort, textcolor=color.white, size = size.small)
 
 //***************************************************************************************************************************************************************
 // Operation orders
@@ -100,4 +107,3 @@ var bool killLongEntry = false
 var bool killShortEntry = false
 var bool longEntry = false
 var bool shortEntry = false
-
