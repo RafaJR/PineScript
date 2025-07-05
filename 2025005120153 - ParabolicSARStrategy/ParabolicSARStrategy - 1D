@@ -28,13 +28,6 @@ takeProfitPercent = input(10, title="Porcentaje de Take Profit (%)", group="Risk
 // General funtions
 //***************************************************************************************************************************************************************
 
-adjustCurrentLower(bool sarIsBearish, bool sarBecomeBearish, float currentLowest) =>
-    if (not sarIsBearish)
-        currentLowest
-    else if (sarBecomeBearish)
-        low
-    else if (sarIsBearish and not sarBecomeBearish)
-        math.min(low, currentLowest)
 
 //***************************************************************************************************************************************************************
 // Chart calculations (SAR, EMAs, Top prizes)
@@ -68,6 +61,7 @@ prizeIsBearishDivergent = slowEmaIsBearish and sarIsBullish
 var float currentHighest = -1e10
 var float currentLowest = 1e10
 var int currentHighestIndex = 0
+var int currentLowestIndex = 0
 
 // Highest prizes on SAR Bullish waves calculation
 if(sarIsBullish and not sarBecomeBullish)
@@ -76,8 +70,13 @@ if(sarIsBullish and not sarBecomeBullish)
 else if(sarIsBullish and sarBecomeBullish)
     currentHighest :=  high
     currentHighestIndex := bar_index
-
-currentLowest := adjustCurrentLower(sarIsBearish, sarBecomeBearish, currentLowest)
+// Lowest prizes on SAR Bearish waves calculation
+if(sarIsBearish and not sarBecomeBearish)
+    currentLowest := math.min(low, currentLowest)
+    currentLowestIndex := currentLowest == low ? bar_index: currentLowestIndex
+else if(sarIsBearish and sarBecomeBearish)
+    currentLowest := low
+    currentLowestIndex := bar_index
 
 //***************************************************************************************************************************************************************
 // Chart printing
@@ -91,9 +90,9 @@ fillColor = prizeIsBullish ? fillColorLong : prizeIsBearish ? fillColorShort : p
 fill(sarPlot, sourcePlot, fillColor, fillgaps=true)
 
 if (sarBecomeBearish)
-    label.new(x=currentHighestIndex, y=currentHighest, text=str.tostring(currentHighest), style=label.style_label_down, color=fillColorLong, textcolor=color.white, size = size.normal)
-//if(sarBecomeBullish)
-//    label.new(x=bar_index, y=low, text=str.tostring(currentLowest), style=label.style_triangleup, color=colorShort, textcolor=color.white, size = size.small)
+    label.new(x=currentHighestIndex, y=currentHighest, text=str.tostring(currentHighest), style=label.style_label_down, color=fillColorShort, textcolor=color.white, size = size.small)
+if(sarBecomeBullish)
+    label.new(x=currentLowestIndex, y=currentLowest, text=str.tostring(currentLowest), style=label.style_label_up, color=fillColorLong, textcolor=color.white, size = size.small)
 
 //***************************************************************************************************************************************************************
 // Operation orders
