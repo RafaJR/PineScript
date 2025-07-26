@@ -14,7 +14,7 @@ hidden = color.new(color.black, 100)
 
 // General inputs
 source = input.source(defval=close, title="Prize data source", group="General configuration")
-maxFractals = input.int(defval=20, title="Max fractals storage", group="General configuration")
+maxFractals = input.int(defval=5, minval=2, maxval=50, title="Max fractals storage", group="General configuration")
 // SAR inputs
 start = input.float(defval=0.02, title="Start", group="SAR")
 increment = input(defval=0.02, title="Increment", group="SAR")
@@ -27,6 +27,10 @@ stopLossPercent = input(defval=1, title="Porcentaje de Stop Loss (%)", group="Ri
 takeProfitPercent = input(defval=10, title="Porcentaje de Take Profit (%)", group="Risk control")
 // Prize support or resisteance magin
 srMargin = input.float(defval=5, title = "Prize support or resisteance magin", group="Risk control")
+
+// Time parameters for testing
+currentYear = input.int(2024, title="Year", step=1, group = "Time")
+currentMonth = input.int(1, title="Month", step=1, group = "Time")
 
 //***************************************************************************************************************************************************************
 // General funtions
@@ -69,8 +73,8 @@ var float currentLowest = 1e10
 var int currentHighestIndex = 0
 var int currentLowestIndex = 0
 // Vars to save the last 2 hightest and lowest fractals happened into SAR waves.
-var lastHighIndexFractal = array.new_int(maxFractals)
-var lastLowIndexFractal = array.new_int(maxFractals)
+var lastHighIndexFractal = array.new_int(0)
+var lastLowIndexFractal = array.new_int(0)
 // Maps to link the a fractal index with it's Value
 var mapLastHighFractal = map.new<int, float>()
 var mapLastLowFractal = map.new<int, float>()
@@ -80,47 +84,37 @@ if(sarIsBullish and not sarBecomeBullish)
     currentHighest := math.max(high, currentHighest)
     if(currentHighest == high)
         currentHighestIndex := bar_index
-        // If the max fractal storage is reached, the first fractal is removed to place a new one
-        if(mapLastHighFractal.size() >= maxFractals)
-            mapLastHighFractal.remove(lastHighIndexFractal.first())
-            lastHighIndexFractal.shift()
-        lastHighIndexFractal.push(currentHighestIndex)
-        mapLastHighFractal.put(currentHighestIndex, currentHighest)
 else if(sarIsBullish and sarBecomeBullish)
     currentHighest :=  high
     currentHighestIndex := bar_index
-     // If the max fractal storage is reached, the first fractal is removed to place a new one
-    if(mapLastHighFractal.size() >= maxFractals)
-        mapLastHighFractal.remove(lastHighIndexFractal.first())
-        lastHighIndexFractal.shift()
-    lastHighIndexFractal.push(currentHighestIndex)
-    mapLastHighFractal.put(currentHighestIndex, currentHighest)
 // Lowest prizes on SAR Bearish waves calculation
 if(sarIsBearish and not sarBecomeBearish)
     currentLowest := math.min(low, currentLowest)
     if(currentLowest == low)
         currentLowestIndex := bar_index
-        // If the max fractal storage is reached, the first fractal is removed to place a new one
-        if(mapLastLowFractal.size() >= maxFractals)
-            mapLastLowFractal.remove(lastLowIndexFractal.first())
-            lastLowIndexFractal.shift()
-        lastLowIndexFractal.push(currentLowestIndex)
-        mapLastLowFractal.put(currentLowestIndex, currentLowest)
 else if(sarIsBearish and sarBecomeBearish)
     currentLowest := low
     currentLowestIndex := bar_index
+
+// When a new bearish SAR wave start, it's the moment to update the previous bullish wave fractals
+
+
+if (sarBecomeBearish)
     // If the max fractal storage is reached, the first fractal is removed to place a new one
-    if(mapLastLowFractal.size() >= maxFractals)
+    if(mapLastHighFractal.size() == maxFractals)
+        mapLastHighFractal.remove(lastHighIndexFractal.first())
+        lastHighIndexFractal.shift()
+    lastHighIndexFractal.push(currentHighestIndex)
+    mapLastHighFractal.put(currentHighestIndex, currentHighest)
+    label.new(x=lastHighIndexFractal.last(), y=currentHighest, text=str.tostring(mapLastHighFractal.get(currentHighestIndex)), style=label.style_label_down, color=fillColorShort, textcolor=color.white, size = size.small)
+if(sarBecomeBullish)
+    // If the max fractal storage is reached, the first fractal is removed to place a new one
+    if(mapLastLowFractal.size() == maxFractals)
         mapLastLowFractal.remove(lastLowIndexFractal.first())
         lastLowIndexFractal.shift()
     lastLowIndexFractal.push(currentLowestIndex)
     mapLastLowFractal.put(currentLowestIndex, currentLowest)
-
-// When a new bearish SAR wave start, it's the moment to update the previous bullish wave fractals
-if (sarBecomeBearish)
-    label.new(x=lastHighIndexFractal.last(), y=currentHighest, text=str.tostring(mapLastHighFractal.get(currentHighestIndex)) + "-" + str.tostring(lastHighIndexFractal.size()), style=label.style_label_down, color=fillColorShort, textcolor=color.white, size = size.small)
-if(sarBecomeBullish)
-    label.new(x=lastLowIndexFractal.last(), y=currentLowest, text=str.tostring(mapLastLowFractal.get(currentLowestIndex)) + "-" + str.tostring(lastLowIndexFractal.size()), style=label.style_label_up, color=fillColorLong, textcolor=color.white, size = size.small)
+    label.new(x=lastLowIndexFractal.last(), y=currentLowest, text=str.tostring(mapLastLowFractal.get(currentLowestIndex)), style=label.style_label_up, color=fillColorLong, textcolor=color.white, size = size.small)
 
 //***************************************************************************************************************************************************************
 // Chart printing
@@ -140,4 +134,3 @@ var bool killLongEntry = false
 var bool killShortEntry = false
 var bool longEntry = false
 var bool shortEntry = false
-
