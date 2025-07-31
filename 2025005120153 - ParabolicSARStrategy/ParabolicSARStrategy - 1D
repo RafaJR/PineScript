@@ -14,7 +14,8 @@ hidden = color.new(color.black, 100)
 
 // General inputs
 source = input.source(defval=close, title="Prize data source", group="General configuration")
-maxFractals = input.int(defval=5, minval=2, maxval=50, title="Max fractals storage", group="General configuration")
+maxFractals = input.int(defval=20, minval=2, maxval=50, title="Max fractals storage", group="General configuration")
+maxSRLimits = input.int(defval=20, minval=2, maxval=50, title="Max support/resisteance limits", group="General configuration")
 // SAR inputs
 start = input.float(defval=0.02, title="Start", group="SAR")
 increment = input(defval=0.02, title="Increment", group="SAR")
@@ -65,7 +66,6 @@ prizeIsBearishDivergent = slowEmaIsBearish and sarIsBullish
 //***************************************************************************************************************************************************************
 // Top prices calculation
 //***************************************************************************************************************************************************************
-
 // Vars to calculate the current highest ant lowest at each SAR by updating in each candle
 var float currentHighest = -1e10
 var float currentLowest = 1e10
@@ -97,8 +97,6 @@ else if(sarIsBearish and sarBecomeBearish)
     currentLowestIndex := bar_index
 
 // When a new bearish SAR wave start, it's the moment to update the previous bullish wave fractals
-
-
 if (sarBecomeBearish)
     // If the max fractal storage is reached, the first fractal is removed to place a new one
     if(mapLastHighFractal.size() == maxFractals)
@@ -117,9 +115,35 @@ if(sarBecomeBullish)
     label.new(x=lastLowIndexFractal.last(), y=currentLowest, text=str.tostring(mapLastLowFractal.get(currentLowestIndex)), style=label.style_label_up, color=fillColorLong, textcolor=color.white, size = size.small)
 
 //***************************************************************************************************************************************************************
+// Support and resisteance limits calculation
+//***************************************************************************************************************************************************************
+// Arrays to save the founded limit indexes
+var arraySupportLimits = array.new_int()
+var arrayResisteanceLimits =  array.new_int()
+
+// All indexes of high fractals
+arrayHighKeys = mapLastHighFractal.keys()
+// Last high fractal index
+int lastHighKey = arrayHighKeys.size() -1
+// Checking all high fractal values
+for int i = 0 to lastHighKey
+    // Price of current high fractal
+    currentHighPrice = mapLastHighFractal.get(arrayHighKeys.get(i))
+    // Comparing current high price with all the high prices
+    for int j = i+1 to lastHighKey
+        // Next high price to compare with
+        toCompareHighPrice = mapLastHighFractal.get(arrayHighKeys.get(j))
+        // Comparing prices to find a resisteance
+        if(toCompareHighPrice >= currentHighPrice - srMargin and toCompareHighPrice <= currentHighPrice + srMargin)
+            // If a resisteance is found, the first high price is saved only the first time
+            if(arrayResisteanceLimits.size() == 0)
+                arrayResisteanceLimits.push(i)
+            // If a resisteance is found, the new value is saved
+            arrayResisteanceLimits.push(j)
+
+//***************************************************************************************************************************************************************
 // Chart printing
 //***************************************************************************************************************************************************************
-
 sarPlot = plot(out, "ParabolicSAR", style=plot.style_stepline, color=sarColor)
 sourcePlot = plot(source, "ParabolicSAR", color=hidden)
 emaPlot = plot(slowEma, "EMA", color=emaColor, linewidth=2)
