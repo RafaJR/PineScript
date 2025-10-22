@@ -154,7 +154,67 @@ fill(sarPlot, sourcePlot, fillColor, fillgaps=true)
 //***************************************************************************************************************************************************************
 // Operation orders
 //***************************************************************************************************************************************************************
+// Entry vars inicialization
 var bool killLongEntry = false
 var bool killShortEntry = false
 var bool longEntry = false
 var bool shortEntry = false
+var bool operationalBusy = false
+
+// Entry conditions
+longEntry := sarIsBullish and sarBecomeBullish and slowEmaIsBullish
+shortEntry := sarIsBearish and sarBecomeBearish and slowEmaIsBearish
+
+//plotshape(longEntry, style=shape.triangleup, location=location.belowbar, color=colorLong, size=size.small)
+//plotshape(shortEntry, style=shape.triangledown, location=location.abovebar, color=colorShort, size=size.small)
+//plotshape(killLongEntry, style=shape.xcross, location=location.abovebar, color=colorLong, size=size.small)
+//plotshape(killShortEntry, style=shape.xcross, location=location.belowbar, color=colorShort, size=size.small)
+
+// Time parameters for testing
+//if (year == 2025 and month == 1 and dayofmonth >= 6 and dayofmonth <= 7)
+//if (year == currentYear and month == currentMonth)
+//if (year == currentYear)
+if (true)
+    // Operation nomenclature variables
+    var int longOpCount = 0
+    var int shortOpCount = 0
+    var string longOpName = ""
+    var string shortOpName = ""
+
+    if(killLongEntry)
+        strategy.close(id=longOpName)
+        operationalBusy := false
+    if(killShortEntry)
+        strategy.close(id=shortOpName)
+        operationalBusy := false
+    if (longEntry and not operationalBusy)
+        longOpCount += 1
+        longOpName := "Long"
+        longOpComment = longOpName + str.tostring(longOpCount)
+        strategy.entry(id=longOpName, direction=strategy.long, comment=longOpComment)
+        stopLossPrize = currentLowest
+        //takeProfitPrize = strategy.position_avg_price * (1 + takeProfitPercent / 100)
+        //strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "PROFIT" + str.tostring(longOpCount))
+        strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(longOpCount))
+        operationalBusy := true
+    if (shortEntry and not operationalBusy)
+        shortOpCount += 1
+        shortOpName := "Short"
+        shortOpComment = shortOpName + str.tostring(shortOpCount)
+        strategy.entry(id=shortOpName, direction=strategy.short, comment=shortOpComment)
+        stopLossPrize = currentHighest
+        //takeProfitPrize = strategy.position_avg_price * (1 - takeProfitPercent / 100)
+        //strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount))
+        strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount))
+        operationalBusy := true
+    if (strategy.position_size == 0)
+        operationalBusy := false
+    if (operationalBusy)
+        bool isLongActive = strategy.position_size > 0
+        bool isShortActive = strategy.position_size < 0
+
+        if (isLongActive and sarIsBullish and sarBecomeBullish)
+            strategy.exit(id=longOpName, from_entry=longOpName, stop=currentLowest)
+        if(isShortActive and sarIsBearish and sarBecomeBearish)
+            strategy.exit(id=shortOpName, from_entry=shortOpName, stop=currentHighest)
+
