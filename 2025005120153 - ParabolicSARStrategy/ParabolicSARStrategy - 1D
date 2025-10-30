@@ -1,7 +1,7 @@
 //@version=5
 strategy(title="ParabolicSARStrategy", shorttitle="ParabolicSARStrategy", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.1, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD)
 
-// 1D - ETHEREUM ALL TIME HISTORY INDEX
+// 1D - Default configuration - Kraken - Ethereum/Dólar estadounidense
 
 // Colors for both moving averages
 colorLong = #00ff08  // Green for bullish movements
@@ -21,7 +21,7 @@ start = input.float(defval=0.02, title="Start", group="SAR")
 increment = input(defval=0.02, title="Increment", group="SAR")
 maximum = input(defval=0.2, title="Maximun", group="SAR")
 // EMA inputs
-slowEmaPeriod = input.int(defval=200, title="Media móbi lenta", minval=1, step=10, inline="Slow EMA", group="EMA")
+slowEmaPeriod = input.int(defval=3, title="Media móbi lenta", minval=1, step=1, inline="Slow EMA", group="EMA")
 
 // StopLoss / TakeProffit percents
 stopLossPercent = input(defval=1, title="Porcentaje de Stop Loss (%)", group="Risk control")
@@ -32,6 +32,9 @@ srMargin = input.float(defval=5, title = "Prize support or resisteance magin", g
 // Time parameters for testing
 currentYear = input.int(2024, title="Year", step=1, group = "Time")
 currentMonth = input.int(1, title="Month", step=1, group = "Time")
+
+// Volume parameters
+minVolume = input.float(13500, title="Volume", group="Volume", step=100)
 
 //***************************************************************************************************************************************************************
 // General funtions
@@ -141,6 +144,7 @@ for int i = 0 to lastHighKey
             // If a resisteance is found, the new value is saved
             arrayResisteanceLimits.push(j)
 
+
 //***************************************************************************************************************************************************************
 // Chart printing
 //***************************************************************************************************************************************************************
@@ -162,8 +166,8 @@ var bool shortEntry = false
 var bool operationalBusy = false
 
 // Entry conditions
-longEntry := sarIsBullish and sarBecomeBullish and slowEmaIsBullish
-shortEntry := sarIsBearish and sarBecomeBearish and slowEmaIsBearish
+longEntry := sarIsBullish and sarBecomeBullish and slowEmaIsBullish and volume > minVolume
+shortEntry := sarIsBearish and sarBecomeBearish and sarBecomeBearish and volume > minVolume
 
 //plotshape(longEntry, style=shape.triangleup, location=location.belowbar, color=colorLong, size=size.small)
 //plotshape(shortEntry, style=shape.triangledown, location=location.abovebar, color=colorShort, size=size.small)
