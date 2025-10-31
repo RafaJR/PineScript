@@ -22,6 +22,7 @@ increment = input(defval=0.02, title="Increment", group="SAR")
 maximum = input(defval=0.2, title="Maximun", group="SAR")
 // EMA inputs
 slowEmaPeriod = input.int(defval=24, title="Media móbil lenta", minval=1, step=1, inline="Slow EMA", group="EMA")
+slowEma2Period = input.int(defval=180, title="Segunda Media móbil lenta", minval=1, step=10, inline="Slow EMA 2", group="EMA")
 
 // StopLoss / TakeProffit percents
 stopLossPercent = input.int(defval=1, title="Porcentaje de Stop Loss (%)", group="Risk control", step=1)
@@ -60,6 +61,11 @@ slowEma = ta.wma(source, slowEmaPeriod)
 slowEmaIsBullish = slowEma < source
 slowEmaIsBearish = slowEma > source
 emaColor = slowEmaIsBullish ? colorLong : colorShort
+
+slowEma2 = ta.wma(source, slowEma2Period)
+slowEma2IsBullish = slowEma2 < slowEma
+slowEma2IsBearish = slowEma2 > slowEma
+ema2Color = slowEma2IsBullish ? colorLong : colorShort
 
 prizeIsBullish = sarIsBullish and slowEmaIsBullish
 prizeIsBearish = sarIsBearish and slowEmaIsBearish
@@ -144,13 +150,13 @@ for int i = 0 to lastHighKey
             // If a resisteance is found, the new value is saved
             arrayResisteanceLimits.push(j)
 
-
 //***************************************************************************************************************************************************************
 // Chart printing
 //***************************************************************************************************************************************************************
 sarPlot = plot(out, "ParabolicSAR", style=plot.style_stepline, color=sarColor)
 sourcePlot = plot(source, "ParabolicSAR", color=hidden)
 emaPlot = plot(slowEma, "EMA", color=emaColor, linewidth=2)
+ema2Plot = plot(slowEma2, "EMA", color=ema2Color, linewidth=3)
 
 fillColor = prizeIsBullish ? fillColorLong : prizeIsBearish ? fillColorShort : prizeIsBullishDivergent ? fillBullishDivergenceColor : fillBearishDivergenceColor
 fill(sarPlot, sourcePlot, fillColor, fillgaps=true)
@@ -166,18 +172,12 @@ var bool shortEntry = false
 var bool operationalBusy = false
 tendenceIsStrong = volume > slowEma * volumeFactor
 
-// Entry conditions
-longEntry := sarIsBullish and sarBecomeBullish and slowEmaIsBullish and tendenceIsStrong
-shortEntry := sarIsBearish and sarBecomeBearish and slowEmaIsBearish and tendenceIsStrong
-//longEntry := sarIsBullish and sarBecomeBullish and slowEmaIsBullish
-//shortEntry := sarIsBearish and sarBecomeBearish and slowEmaIsBearish
-//longEntry := sarIsBullish and sarBecomeBullish
-//shortEntry := sarIsBearish and sarBecomeBearish
 
-//plotshape(longEntry, style=shape.triangleup, location=location.belowbar, color=colorLong, size=size.small)
-//plotshape(shortEntry, style=shape.triangledown, location=location.abovebar, color=colorShort, size=size.small)
-//plotshape(killLongEntry, style=shape.xcross, location=location.abovebar, color=colorLong, size=size.small)
-//plotshape(killShortEntry, style=shape.xcross, location=location.belowbar, color=colorShort, size=size.small)
+// Entry conditions
+longEntry := sarIsBullish and sarBecomeBullish and slowEmaIsBullish and slowEma2IsBullish and tendenceIsStrong
+shortEntry := sarIsBearish and sarBecomeBearish and slowEmaIsBearish and slowEma2IsBearish and tendenceIsStrong
+//longEntry := sarIsBullish and sarBecomeBullish and slowEmaIsBullish and slowEma2IsBullish and tendenceIsStrong
+//shortEntry := sarIsBearish and sarBecomeBearish and slowEmaIsBearish and slowEma2IsBearish and tendenceIsStrong
 
 // Time parameters for testing
 //if (year == 2025 and month == 1 and dayofmonth >= 6 and dayofmonth <= 7)
