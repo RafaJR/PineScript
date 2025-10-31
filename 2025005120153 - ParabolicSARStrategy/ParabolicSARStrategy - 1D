@@ -24,13 +24,13 @@ maximum = input(defval=0.2, title="Maximun", group="SAR")
 slowEmaPeriod = input.int(defval=24, title="Media móbil lenta", minval=1, step=1, inline="Slow EMA", group="EMA")
 
 // StopLoss / TakeProffit percents
-stopLossPercent = input(defval=1, title="Porcentaje de Stop Loss (%)", group="Risk control")
-takeProfitPercent = input(defval=10, title="Porcentaje de Take Profit (%)", group="Risk control")
+stopLossPercent = input.int(defval=1, title="Porcentaje de Stop Loss (%)", group="Risk control", step=1)
+takeProfitPercent = input.int(defval=10, title="Porcentaje de Take Profit (%)", group="Risk control", step=1)
 // Prize support or resisteance magin
 srMargin = input.float(defval=5, title = "Prize support or resisteance magin", group="Risk control")
 
 // Time parameters for testing
-currentYear = input.int(2024, title="Year", step=1, group = "Time")
+currentYear = input.int(2015, title="Year", step=1, group = "Time")
 currentMonth = input.int(defval=1, title="Month", step=1, group = "Time")
 
 // Volume parameters
