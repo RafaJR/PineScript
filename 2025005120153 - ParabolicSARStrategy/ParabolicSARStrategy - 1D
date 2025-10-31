@@ -1,7 +1,7 @@
 //@version=5
 strategy(title="ParabolicSARStrategy", shorttitle="ParabolicSARStrategy", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.1, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD)
 
-// 1D - Default configuration
+// 1D - Kraken - Ethereum / U.S. Dollar
 
 // Colors for both moving averages
 colorLong = #00ff08  // Green for bullish movements
