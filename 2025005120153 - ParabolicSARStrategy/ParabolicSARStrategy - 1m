@@ -1,7 +1,7 @@
 //@version=5
 strategy(title="ParabolicSARStrategy", shorttitle="ParabolicSARStrategy", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.1, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD)
 
-// 1D - Kraken - Ethereum / U.S. Dollar
+// 1m - Kraken - Ethereum / U.S. Dollar
 
 // Colors for both moving averages
 colorLong = #00ff08  // Green for bullish movements
@@ -18,24 +18,23 @@ maxFractals = input.int(defval=20, minval=2, maxval=50, title="Max fractals stor
 maxSRLimits = input.int(defval=20, minval=2, maxval=50, title="Max support/resisteance limits", group="General configuration")
 // SAR inputs
 start = input.float(defval=0.02, title="Start", group="SAR", step=0.01)
-increment = input.float(defval=0.01, title="Increment", group="SAR", step=0.01)
+increment = input.float(defval=0, title="Increment", group="SAR", step=0.01)
 maximum = input.float(defval=0.2, title="Maximun", group="SAR", step=0.01)
 // EMA inputs
-slowEmaPeriod = input.int(defval=9, title="Media móbil lenta", minval=1, step=1, inline="Slow EMA", group="EMA")
-slowEma2Period = input.int(defval=154, title="Segunda Media móbil lenta", minval=1, step=1, inline="Slow EMA 2", group="EMA")
+slowEma2Period = input.int(defval=120, title="Segunda Media móbil lenta", minval=1, step=1, inline="Slow EMA 2", group="EMA")
 
 // StopLoss / TakeProffit percents
-stopLossPercent = input.int(defval=1, title="Porcentaje de Stop Loss (%)", group="Risk control", step=1)
-takeProfitPercent = input.int(defval=10, title="Porcentaje de Take Profit (%)", group="Risk control", step=1)
+stopLossPercent = input.float(defval=1, title="Porcentaje de Stop Loss (%)", group="Risk control", step=0.1)
+takeProfitPercent = input.float(defval=1.5, title="Porcentaje de Take Profit (%)", group="Risk control", step=0.1)
 // Prize support or resisteance magin
 srMargin = input.float(defval=5, title = "Prize support or resisteance magin", group="Risk control")
 
 // Time parameters for testing
-currentYear = input.int(2015, title="Year", step=1, group = "Time")
+currentYear = input.int(defval=2015, title="Year", step=1, group = "Time")
 currentMonth = input.int(defval=1, title="Month", step=1, group = "Time")
 
 // Volume parameters
-volumeFactor = input.float(defval=0.016, title="Volume factor", group="Volume", step=0.001)
+volumeFactor = input.float(defval=0.020, title="Volume factor", group="Volume", step=0.001)
 
 //***************************************************************************************************************************************************************
 // General funtions
@@ -57,20 +56,15 @@ sarColor = sarIsBearish ?  colorShort : colorLong
 sarBecomeBearish = sarIsBearish and out[1] < source[1]
 sarBecomeBullish = sarIsBullish and out[1] > source[1]
 
-slowEma = ta.wma(source, slowEmaPeriod)
-slowEmaIsBullish = slowEma < source
-slowEmaIsBearish = slowEma > source
-emaColor = slowEmaIsBullish ? colorLong : colorShort
+
 
 slowEma2 = ta.wma(source, slowEma2Period)
-slowEma2IsBullish = slowEma2 < slowEma
-slowEma2IsBearish = slowEma2 > slowEma
+slowEma2IsBullish = slowEma2 < source
+slowEma2IsBearish = slowEma2 > source
 ema2Color = slowEma2IsBullish ? colorLong : colorShort
 
-prizeIsBullish = sarIsBullish and slowEmaIsBullish
-prizeIsBearish = sarIsBearish and slowEmaIsBearish
-prizeIsBullishDivergent = slowEmaIsBullish and sarIsBearish
-prizeIsBearishDivergent = slowEmaIsBearish and sarIsBullish
+prizeIsBullish = sarIsBullish and slowEma2IsBullish
+prizeIsBearish = sarIsBearish and slowEma2IsBearish
 
 //***************************************************************************************************************************************************************
 // Top prices calculation
@@ -155,10 +149,9 @@ for int i = 0 to lastHighKey
 //***************************************************************************************************************************************************************
 sarPlot = plot(out, "ParabolicSAR", style=plot.style_stepline, color=sarColor)
 sourcePlot = plot(source, "ParabolicSAR", color=hidden)
-emaPlot = plot(slowEma, "EMA", color=emaColor, linewidth=2)
-ema2Plot = plot(slowEma2, "EMA", color=ema2Color, linewidth=3)
+ema2Plot = plot(slowEma2, "EMA", color=ema2Color, linewidth=2)
 
-fillColor = prizeIsBullish ? fillColorLong : prizeIsBearish ? fillColorShort : prizeIsBullishDivergent ? fillBullishDivergenceColor : fillBearishDivergenceColor
+fillColor = prizeIsBullish ? fillColorLong : fillColorShort
 fill(sarPlot, sourcePlot, fillColor, fillgaps=true)
 
 //***************************************************************************************************************************************************************
@@ -170,12 +163,12 @@ var bool killShortEntry = false
 var bool longEntry = false
 var bool shortEntry = false
 var bool operationalBusy = false
-tendenceIsStrong = volume > slowEma * volumeFactor
+tendenceIsStrong = volume > source * volumeFactor
 
 
 // Entry conditions
-longEntry := sarIsBullish and sarBecomeBullish and slowEmaIsBullish and slowEma2IsBullish and tendenceIsStrong
-shortEntry := sarIsBearish and sarBecomeBearish and slowEmaIsBearish and slowEma2IsBearish and tendenceIsStrong
+longEntry := sarIsBullish and sarBecomeBullish and slowEma2IsBullish and tendenceIsStrong
+shortEntry := sarIsBearish and sarBecomeBearish and slowEma2IsBearish and tendenceIsStrong
 //longEntry := sarIsBullish and sarBecomeBullish and slowEmaIsBullish and slowEma2IsBullish and tendenceIsStrong
 //shortEntry := sarIsBearish and sarBecomeBearish and slowEmaIsBearish and slowEma2IsBearish and tendenceIsStrong
 
@@ -202,9 +195,9 @@ if (true)
         longOpComment = longOpName + str.tostring(longOpCount)
         strategy.entry(id=longOpName, direction=strategy.long, comment=longOpComment)
         stopLossPrize = currentLowest
-        //takeProfitPrize = strategy.position_avg_price * (1 + takeProfitPercent / 100)
-        //strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "PROFIT" + str.tostring(longOpCount))
-        strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(longOpCount))
+        takeProfitPrize = strategy.position_avg_price * (1 + takeProfitPercent / 100)
+        strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "PROFIT" + str.tostring(longOpCount))
+        //strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(longOpCount))
         operationalBusy := true
     if (shortEntry and not operationalBusy)
         shortOpCount += 1
@@ -212,9 +205,9 @@ if (true)
         shortOpComment = shortOpName + str.tostring(shortOpCount)
         strategy.entry(id=shortOpName, direction=strategy.short, comment=shortOpComment)
         stopLossPrize = currentHighest
-        //takeProfitPrize = strategy.position_avg_price * (1 - takeProfitPercent / 100)
-        //strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount))
-        strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount))
+        takeProfitPrize = strategy.position_avg_price * (1 - takeProfitPercent / 100)
+        strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount))
+        //strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount))
         operationalBusy := true
     if (strategy.position_size == 0)
         operationalBusy := false
