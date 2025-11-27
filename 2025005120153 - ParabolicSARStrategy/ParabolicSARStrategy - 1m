@@ -17,7 +17,7 @@ source = input.source(defval=close, title="Prize data source", group="General co
 maxFractals = input.int(defval=20, minval=2, maxval=50, title="Max fractals storage", group="General configuration")
 maxSRLimits = input.int(defval=20, minval=2, maxval=50, title="Max support/resisteance limits", group="General configuration")
 // SAR inputs
-start = input.float(defval=0.02, title="Start", group="SAR", step=0.01)
+start = input.float(defval=0.03, title="Start", group="SAR", step=0.01)
 increment = input.float(defval=0, title="Increment", group="SAR", step=0.01)
 maximum = input.float(defval=0.2, title="Maximun", group="SAR", step=0.01)
 // EMA inputs
