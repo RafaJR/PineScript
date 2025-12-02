@@ -34,7 +34,8 @@ currentYear = input.int(defval=2015, title="Year", step=1, group = "Time")
 currentMonth = input.int(defval=1, title="Month", step=1, group = "Time")
 
 // Volume parameters
-volumeFactor = input.float(defval=0.020, title="Volume factor", group="Volume", step=0.001)
+minBullishVolumePressure = input.int(defval=70, title="MinBullishVolumePressure", group="Volume", step=1)
+minBearishVolumePressure = input.int(defval=70, title="MinBullishVolumePressure", group="Volume", step=1)
 
 //***************************************************************************************************************************************************************
 // General funtions
@@ -145,6 +146,15 @@ for int i = 0 to lastHighKey
             arrayResisteanceLimits.push(j)
 
 //***************************************************************************************************************************************************************
+// Volume calculation
+//***************************************************************************************************************************************************************
+bodySize = close - open
+totalRange = high - low
+
+volumeIsBullish = totalRange != 0 and (bodySize > 0 ? volume * (bodySize / totalRange) : 0) > minBullishVolumePressure
+volumeIsBearish = totalRange != 0 and (bodySize < 0 ? volume * (math.abs(bodySize) / totalRange) : 0) > minBearishVolumePressure
+
+//***************************************************************************************************************************************************************
 // Chart printing
 //***************************************************************************************************************************************************************
 sarPlot = plot(out, "ParabolicSAR", style=plot.style_stepline, color=sarColor)
@@ -163,12 +173,10 @@ var bool killShortEntry = false
 var bool longEntry = false
 var bool shortEntry = false
 var bool operationalBusy = false
-tendenceIsStrong = volume > source * volumeFactor
-
 
 // Entry conditions
-longEntry := sarIsBullish and sarBecomeBullish and slowEma2IsBullish and tendenceIsStrong
-shortEntry := sarIsBearish and sarBecomeBearish and slowEma2IsBearish and tendenceIsStrong
+longEntry := sarIsBullish and sarBecomeBullish and slowEma2IsBullish and volumeIsBullish
+shortEntry := sarIsBearish and sarBecomeBearish and slowEma2IsBearish and volumeIsBearish
 //longEntry := sarIsBullish and sarBecomeBullish and slowEmaIsBullish and slowEma2IsBullish and tendenceIsStrong
 //shortEntry := sarIsBearish and sarBecomeBearish and slowEmaIsBearish and slowEma2IsBearish and tendenceIsStrong
 
