@@ -218,7 +218,7 @@ if (true)
         strategy.entry(id=longOpName, direction=strategy.long, comment=longOpComment)
         stopLossPrize = currentLowest
         takeProfitPrize = strategy.position_avg_price * (1 + takeProfitPercent / 100)
-        strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "PROFIT" + str.tostring(longOpCount))
+        strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "PROFIT" + str.tostring(longOpCount), comment_loss = "LOST" + str.tostring(longOpCount))
         //strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(longOpCount))
         operationalBusy := true
     if (shortEntry and not operationalBusy)
@@ -228,7 +228,7 @@ if (true)
         strategy.entry(id=shortOpName, direction=strategy.short, comment=shortOpComment)
         stopLossPrize = currentHighest
         takeProfitPrize = strategy.position_avg_price * (1 - takeProfitPercent / 100)
-        strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount))
+        strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount), comment_loss = "LOST" + str.tostring(longOpCount))
         //strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount))
         operationalBusy := true
     if (strategy.position_size == 0)
@@ -239,6 +239,10 @@ if (true)
         bool isShortActive = strategy.position_size < 0
 
         if (isLongActive and sarIsBullish and sarBecomeBullish)
-            strategy.exit(id=longOpName, from_entry=longOpName, stop=currentLowest)
-        if(isShortActive and sarIsBearish and sarBecomeBearish)
-            strategy.exit(id=shortOpName, from_entry=shortOpName, stop=currentHighest)
+            strategy.exit(id=longOpName, from_entry=longOpName, stop=currentLowest, comment_profit = "PROFIT" + str.tostring(longOpCount), comment_loss = "LOST" + str.tostring(longOpCount))
+        if (isShortActive and sarIsBearish and sarBecomeBearish)
+            strategy.exit(id=shortOpName, from_entry=shortOpName, stop=currentHighest, comment_profit = "PROFIT" + str.tostring(longOpCount), comment_loss = "LOST" + str.tostring(longOpCount))
+        if (isLongActive and not bollingerBandsTendence)
+            strategy.exit(id=longOpName, from_entry=longOpName, profit=currentHighest, comment_profit = "PROFIT" + str.tostring(longOpCount), comment_loss = "LOST" + str.tostring(longOpCount))
+        if (isShortActive and not bollingerBandsTendence)
+            strategy.exit(id=shortOpName, from_entry=shortOpName, profit=currentLowest, comment_profit = "PROFIT" + str.tostring(longOpCount), comment_loss = "LOST" + str.tostring(longOpCount))
