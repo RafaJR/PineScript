@@ -193,8 +193,10 @@ var bool shortEntry = false
 var bool operationalBusy = false
 
 // Entry conditions
-longEntry := sarIsBullish and sarBecomeBullish and bollingerBandsTendence and bollingerBasisIsBullish
-shortEntry := sarIsBearish and sarBecomeBearish and bollingerBandsTendence and bollingerBasisIsBearish
+//longEntry := sarIsBullish and sarBecomeBullish and bollingerBandsTendence and bollingerBasisIsBullish
+//shortEntry := sarIsBearish and sarBecomeBearish and bollingerBandsTendence and bollingerBasisIsBearish
+longEntry := sarBecomeBullish and bollingerBandsTendence and bollingerBasisIsBullish
+shortEntry := sarBecomeBearish and bollingerBandsTendence and bollingerBasisIsBearish
 
 // Time parameters for testing
 //if (year == 2025 and month == 1 and dayofmonth >= 6 and dayofmonth <= 7)
