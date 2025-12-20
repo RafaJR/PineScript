@@ -34,12 +34,10 @@ currentYear = input.int(defval=2015, title="Year", step=1, group = "Time")
 currentMonth = input.int(defval=1, title="Month", step=1, group = "Time")
 
 // MACD inputs
-int    fastLenInput = input.int(13, "Fast length",   1, group="MACD")
-int    slowLenInput = input.int(25, "Slow length",   1, group="MACD")
+int    fastLenInput = input.int(40, "Fast length",   1, group="MACD")
+int    slowLenInput = input.int(200, "Slow length",   1, group="MACD")
 int    sigLenInput  = input.int(9,  "Signal length", 1, group="MACD")
-string oscTypeInput = input.string("EMA", "Oscillator MA type", ["EMA", "SMA"], display = display.data_window, group="MACD")
-string sigTypeInput = input.string("EMA", "Signal MA type",     ["EMA", "SMA"], display = display.data_window, group="MACD")
-maType = input.string("VWMA", "Basis MA Type", options = ["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="MACD")
+maType = input.string("SMA", "Basis MA Type", options = ["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="MACD")
 currentStrench = 0.0
 longEntrySustainable = false
 shortEntrySustainable = false
@@ -159,10 +157,10 @@ ma(float source, int length, simple string maType) =>
         "VWMA" => ta.vwma(source, length)
 
 // Calculate and plot the MACD, signal, and histogram values.
-float maFast = ma(source, fastLenInput, oscTypeInput)
-float maSlow = ma(source, slowLenInput, oscTypeInput)
+float maFast = ma(source, fastLenInput, maType)
+float maSlow = ma(source, slowLenInput, maType)
 float macd   = maFast - maSlow
-float signal = ma(macd, sigLenInput, sigTypeInput)
+float signal = ma(macd, sigLenInput, maType)
 float hist   = macd - signal
 //color hColor = hist >= 0 ? hist > hist[1] ? #26a69a : #b2dfdb : hist > hist[1] ? #ffcdd2 : #ff5252
 
