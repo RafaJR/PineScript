@@ -1,0 +1,264 @@
+//@version=5
+strategy(title="ParabolicSARStrategy", shorttitle="ParabolicSARStrategy", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.25, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD, slippage = 175)
+
+// 1m - Kraken - ETHUSD Single Collateral Futures Contract
+
+// Colors for both moving averages
+colorLong = #00ff08  // Green for bullish movements
+colorShort = #ff0000 // Red for bearish movements
+fillColorLong = color.new(colorLong, 70)
+fillColorShort = color.new(colorShort, 70)
+fillBullishDivergenceColor = color.new(colorLong, 90)
+fillBearishDivergenceColor = color.new(colorShort, 90)
+hidden = color.new(color.black, 100)
+
+// General inputs
+source = input.source(defval=close, title="Prize data source", group="General configuration")
+maxFractals = input.int(defval=20, minval=2, maxval=50, title="Max fractals storage", group="General configuration")
+maxSRLimits = input.int(defval=20, minval=2, maxval=50, title="Max support/resisteance limits", group="General configuration")
+
+// SAR inputs
+start = input.float(defval=0.01, title="Start", group="SAR", step=0.01)
+increment = input.float(defval=0, title="Increment", group="SAR", step=0.01)
+maximum = input.float(defval=0.2, title="Maximun", group="SAR", step=0.01)
+
+// StopLoss / TakeProffit percents
+stopLossPercent = input.float(defval=1000, title="Porcentaje de Stop Loss (%)", group="Risk control", step=0.1)
+takeProfitPercent = input.float(defval=1000, title="Porcentaje de Take Profit (%)", group="Risk control", step=0.1)
+
+// Prize support or resisteance magin
+srMargin = input.float(defval=5, title = "Prize support or resisteance magin", group="Risk control")
+
+// Time parameters for testing
+currentYear = input.int(defval=2015, title="Year", step=1, group = "Time")
+currentMonth = input.int(defval=1, title="Month", step=1, group = "Time")
+
+// MACD inputs
+int    fastLenInput = input.int(1, "Fast length",   1, group="MACD")
+int    slowLenInput = input.int(9, "Slow length",   1, group="MACD")
+int    sigLenInput  = input.int(9,  "Signal length", 1, group="MACD")
+maType = input.string("SMA", "Basis MA Type", options = ["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="MACD")
+currentStrench = 0.0
+longEntrySustainable = false
+shortEntrySustainable = false
+
+
+//***************************************************************************************************************************************************************
+// General funtions
+//***************************************************************************************************************************************************************
+
+
+//***************************************************************************************************************************************************************
+// Chart calculations (SAR, EMAs, Top prizes)
+//***************************************************************************************************************************************************************
+out = ta.sar(start, increment, maximum)
+
+// SAR indicates a Bullish trend
+sarIsBullish = out < source
+// SAR Indicates a Bearish trend
+sarIsBearish = out > source
+// Setting the SAR Color according to trend
+sarColor = sarIsBearish ?  colorShort : colorLong
+// A new SAR tendence just started
+sarBecomeBearish = sarIsBearish and out[1] < source[1]
+sarBecomeBullish = sarIsBullish and out[1] > source[1]
+
+prizeIsBullish = sarIsBullish
+prizeIsBearish = sarIsBearish
+
+//***************************************************************************************************************************************************************
+// Top prices calculation
+//***************************************************************************************************************************************************************
+// Vars to calculate the current highest ant lowest at each SAR by updating in each candle
+var float currentHighest = -1e10
+var float currentLowest = 1e10
+// Vars to calculate the current hightest and lowest index prize.
+var int currentHighestIndex = 0
+var int currentLowestIndex = 0
+// Vars to save the last 2 hightest and lowest fractals happened into SAR waves.
+var lastHighIndexFractal = array.new_int(0)
+var lastLowIndexFractal = array.new_int(0)
+// Maps to link the a fractal index with it's Value
+var mapLastHighFractal = map.new<int, float>()
+var mapLastLowFractal = map.new<int, float>()
+
+// Highest prizes on SAR Bullish waves calculation
+if(sarIsBullish and not sarBecomeBullish)
+    currentHighest := math.max(high, currentHighest)
+    if(currentHighest == high)
+        currentHighestIndex := bar_index
+else if(sarIsBullish and sarBecomeBullish)
+    currentHighest :=  high
+    currentHighestIndex := bar_index
+// Lowest prizes on SAR Bearish waves calculation
+if(sarIsBearish and not sarBecomeBearish)
+    currentLowest := math.min(low, currentLowest)
+    if(currentLowest == low)
+        currentLowestIndex := bar_index
+else if(sarIsBearish and sarBecomeBearish)
+    currentLowest := low
+    currentLowestIndex := bar_index
+
+// When a new bearish SAR wave start, it's the moment to update the previous bullish wave fractals
+if (sarBecomeBearish)
+    // If the max fractal storage is reached, the first fractal is removed to place a new one
+    if(mapLastHighFractal.size() == maxFractals)
+        mapLastHighFractal.remove(lastHighIndexFractal.first())
+        lastHighIndexFractal.shift()
+    lastHighIndexFractal.push(currentHighestIndex)
+    mapLastHighFractal.put(currentHighestIndex, currentHighest)
+    label.new(x=lastHighIndexFractal.last(), y=currentHighest, text=str.tostring(mapLastHighFractal.get(currentHighestIndex)), style=label.style_label_down, color=fillColorShort, textcolor=color.white, size = size.small)
+if(sarBecomeBullish)
+    // If the max fractal storage is reached, the first fractal is removed to place a new one
+    if(mapLastLowFractal.size() == maxFractals)
+        mapLastLowFractal.remove(lastLowIndexFractal.first())
+        lastLowIndexFractal.shift()
+    lastLowIndexFractal.push(currentLowestIndex)
+    mapLastLowFractal.put(currentLowestIndex, currentLowest)
+    label.new(x=lastLowIndexFractal.last(), y=currentLowest, text=str.tostring(mapLastLowFractal.get(currentLowestIndex)), style=label.style_label_up, color=fillColorLong, textcolor=color.white, size = size.small)
+
+//***************************************************************************************************************************************************************
+// Support and resisteance limits calculation
+//***************************************************************************************************************************************************************
+// Arrays to save the founded limit indexes
+var arraySupportLimits = array.new_int()
+var arrayResisteanceLimits =  array.new_int()
+
+// All indexes of high fractals
+arrayHighKeys = mapLastHighFractal.keys()
+// Last high fractal index
+int lastHighKey = arrayHighKeys.size() -1
+// Checking all high fractal values
+for int i = 0 to lastHighKey
+    // Price of current high fractal
+    currentHighPrice = mapLastHighFractal.get(arrayHighKeys.get(i))
+    // Comparing current high price with all the high prices
+    for int j = i+1 to lastHighKey
+        // Next high price to compare with
+        toCompareHighPrice = mapLastHighFractal.get(arrayHighKeys.get(j))
+        // Comparing prices to find a resisteance
+        if(toCompareHighPrice >= currentHighPrice - srMargin and toCompareHighPrice <= currentHighPrice + srMargin)
+            // If a resisteance is found, the first high price is saved only the first time
+            if(arrayResisteanceLimits.size() == 0)
+                arrayResisteanceLimits.push(i)
+            // If a resisteance is found, the new value is saved
+            arrayResisteanceLimits.push(j)
+
+//***************************************************************************************************************************************************************
+// MACD calculation
+//***************************************************************************************************************************************************************
+
+ma(float source, int length, simple string maType) =>
+    switch maType
+        "SMA" => ta.sma(source, length)
+        "EMA" => ta.ema(source, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+
+// Calculate and plot the MACD, signal, and histogram values.
+float maFast = ma(source, fastLenInput, maType)
+float maSlow = ma(source, slowLenInput, maType)
+float macd   = maFast - maSlow
+float signal = ma(macd, sigLenInput, maType)
+float hist   = macd - signal
+//color hColor = hist >= 0 ? hist > hist[1] ? #26a69a : #b2dfdb : hist > hist[1] ? #ffcdd2 : #ff5252
+
+//hline(0, "Zero", #787b8680)
+//plot(hist, "Histogram", hColor, style = plot.style_columns)
+//plot(macd, "MACD")
+//plot(signal, "Signal line", #ff6d00)
+
+// Create alert conditions.
+//alertcondition(hist[1] >= 0 and hist < 0, "Rising to falling", "MACD histogram switched from a rising to falling state")
+//alertcondition(hist[1] <= 0 and hist > 0, "Falling to rising", "MACD histogram switched from a falling to rising state")
+
+//***************************************************************************************************************************************************************
+// Chart printing
+//***************************************************************************************************************************************************************
+sarPlot = plot(out, "ParabolicSAR", style=plot.style_stepline, color=sarColor)
+sourcePlot = plot(source, "ParabolicSAR", color=hidden)
+
+fillColor = prizeIsBullish ? fillColorLong : fillColorShort
+fill(sarPlot, sourcePlot, fillColor, fillgaps=true)
+
+//***************************************************************************************************************************************************************
+// Operation orders
+//***************************************************************************************************************************************************************
+// Entry vars inicialization
+var bool killLongEntry = false
+var bool killShortEntry = false
+var bool longEntry = false
+var bool shortEntry = false
+var bool operationalBusy = false
+
+// Entry conditions
+longEntry := ta.crossover(maFast, maSlow)
+shortEntry := ta.crossunder(maFast, maSlow)
+if(longEntry)
+    currentStrench := maSlow - maFast
+else
+    if maSlow < maFast
+        nextStrench = maSlow - maFast
+        longEntrySustainable := nextStrench > currentStrench
+        currentStrench := nextStrench
+if(shortEntry)
+    currentStrench := maFast - maSlow
+else
+    if maSlow > maFast
+        nextStrench = maFast - maSlow
+        shortEntrySustainable := nextStrench > currentStrench
+        currentStrench := nextStrench
+
+// Time parameters for testing
+//if (year == 2025 and month == 1 and dayofmonth >= 6 and dayofmonth <= 7)
+//if (year == currentYear and month == currentMonth)
+//if (year == currentYear)
+if (true)
+    // Operation nomenclature variables
+    var int longOpCount = 0
+    var int shortOpCount = 0
+    var string longOpName = ""
+    var string shortOpName = ""
+
+    if(killLongEntry)
+        strategy.close(id=longOpName)
+        operationalBusy := false
+    if(killShortEntry)
+        strategy.close(id=shortOpName)
+        operationalBusy := false
+    if (longEntry and not operationalBusy)
+        longOpCount += 1
+        longOpName := "Long"
+        longOpComment = longOpName + str.tostring(longOpCount)
+        strategy.entry(id=longOpName, direction=strategy.long, comment=longOpComment)
+        stopLossPrize = currentLowest
+        takeProfitPrize = strategy.position_avg_price * (1 + takeProfitPercent / 100)
+        strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "TakeProffit" + str.tostring(longOpCount), comment_loss = "SL" + str.tostring(longOpCount))
+        //strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(longOpCount))
+        operationalBusy := true
+    if (shortEntry and not operationalBusy)
+        shortOpCount += 1
+        shortOpName := "Short"
+        shortOpComment = shortOpName + str.tostring(shortOpCount)
+        strategy.entry(id=shortOpName, direction=strategy.short, comment=shortOpComment)
+        stopLossPrize = currentHighest
+        takeProfitPrize = strategy.position_avg_price * (1 - takeProfitPercent / 100)
+        strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "TP" + str.tostring(shortOpCount), comment_loss = "SL" + str.tostring(longOpCount))
+        //strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount))
+        operationalBusy := true
+    if (strategy.position_size == 0)
+        operationalBusy := false
+    // Stop Loss update
+    if (operationalBusy)
+        bool isLongActive = strategy.position_size > 0
+        bool isShortActive = strategy.position_size < 0
+
+        if (isLongActive and sarBecomeBullish)
+            strategy.exit(id=longOpName, from_entry=longOpName, stop=currentLowest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+        if (isShortActive and sarBecomeBearish)
+            strategy.exit(id=shortOpName, from_entry=shortOpName, stop=currentHighest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+        if (isLongActive and not longEntrySustainable)
+            strategy.exit(id=longOpName, from_entry=longOpName, profit=currentHighest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+        if (isShortActive and not shortEntrySustainable)
+            strategy.exit(id=shortOpName, from_entry=shortOpName, profit=currentLowest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
