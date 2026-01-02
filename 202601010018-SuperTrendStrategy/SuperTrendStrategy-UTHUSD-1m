@@ -106,7 +106,7 @@ dnPlot = plot(trend == 1 ? na : dn, title="Down Trend", style=plot.style_linebr,
 sellSignal = trend == -1 and trend[1] == 1
 plotshape(sellSignal ? dn : na, title="DownTrend Begins", location=location.absolute, style=shape.triangledown, size=size.tiny, color=colorShort)
 
-mPlot = plot(ohlc4, title="", style=plot.style_circles, linewidth=1)
+mPlot = plot(ohlc4, color=hidden)
 
 fillColorLongWeak = color.new(colorLong, 90)
 fillColorShortWeak = color.new(colorShort, 90)
