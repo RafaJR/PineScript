@@ -1,0 +1,17 @@
+Rules:
+    1. Solo a favor de tendencia, según la SuperTrend.
+    2. Se produce una ruptura favorable (indicado por DLB) poco después del inicio de una tendencia SuperTrend.
+        2.1. Se coloca el StopLoss en el mínimo anterior.
+    3. Entradas largas solo con el mfi > 50 y entradas cortas a la inversa.
+
+Vars:
+    Máximo y mínimo al inicio de la SuperTrend.
+        currentSuperTrendMin
+        currentSuperTrendMax
+    Estado actual de la SuperTrend:
+        trend = 1 alcista -1 bajista
+    Nivel del MFI:
+        mfi 0 - 100
+    Señales de Dynamic breakouts
+        bullish_breakout and not_bullish
+        bearish_breakout and not_bearish

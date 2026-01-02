@@ -2,6 +2,7 @@
 strategy(title="SuperTrend Strategy", shorttitle="superTrendStrategy", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.25, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD, slippage = 175)
 
 // 1m - Kraken - Ethereum / U.S. Dollar
+// https://youtu.be/xxgI9hRwWaI?t=291
 
 // Colors for both moving averages
 colorLong = #00ff08  // Green for bullish movements
@@ -26,58 +27,22 @@ changeATR= input.bool(title="Change ATR Calculation Method ?", defval=true, grou
 showsignals = input.bool(title="Show Buy/Sell Signals ?", defval=true, group="SuperTrend")
 highlighting = input.bool(title="Highlighter On/Off ?", defval=true, group="SuperTrend")
 
-// StopLoss / TakeProffit percents
-stopLossPercent = input.float(defval=5, title="Porcentaje de Stop Loss (%)", group="Risk control", step=0.1)
-takeProfitPercent = input.float(defval=8, title="Porcentaje de Take Profit (%)", group="Risk control", step=0.1)
+// Monetary Flow Index configuration
+MFIlength = input.int(title="Length", defval=14, minval=1, maxval=2000, group="Monetary Flow Index")
 
-// Prize support or resisteance magin
+// StopLoss / TakeProffit percents
+stopLossPercent = input.float(defval=1, title="Porcentaje de Stop Loss (%)", group="Risk control", step=0.1)
+takeProfitPercent = input.float(defval=3, title="Porcentaje de Take Profit (%)", group="Risk control", step=0.1)
 srMargin = input.float(defval=5, title = "Prize support or resisteance magin", group="Risk control")
 
 // Time parameters for testing
 currentYear = input.int(defval=2015, title="Year", step=1, group = "Time")
 currentMonth = input.int(defval=1, title="Month", step=1, group = "Time")
 
-//***************************************************************************************************************************************************************
-// SuperTrend calculations
-//***************************************************************************************************************************************************************
-atr2 = ta.sma(ta.tr, Periods)
-atr= changeATR ? ta.atr(Periods) : atr2
-
-up=STsource-(Multiplier*atr)
-up1 = nz(up[1],up)
-up := source[1] > up1 ? math.max(up,up1) : up
-
-dn=STsource+(Multiplier*atr)
-dn1 = nz(dn[1], dn)
-dn := source[1] < dn1 ? math.min(dn, dn1) : dn
-
-trend = 1
-trend := nz(trend[1], trend)
-trend := trend == -1 and source > dn1 ? 1 : trend == 1 and source < up1 ? -1 : trend
-
-upPlot = plot(trend == 1 ? up : na, title="Up Trend", style=plot.style_linebr, linewidth=1, color=colorLong)
-
-buySignal = trend == 1 and trend[1] == -1
-plotshape(buySignal ? up : na, title="UpTrend Begins", location=location.absolute, style=shape.triangleup, size=size.tiny, color=colorLong)
-//plotshape(buySignal and showsignals ? up : na, title="Buy", text="Buy", location=location.absolute, style=shape.labelup, size=size.tiny, color=colorLong, textcolor=color.white)
-
-dnPlot = plot(trend == 1 ? na : dn, title="Down Trend", style=plot.style_linebr, linewidth=1, color=colorShort)
-
-sellSignal = trend == -1 and trend[1] == 1
-plotshape(sellSignal ? dn : na, title="DownTrend Begins", location=location.absolute, style=shape.triangledown, size=size.tiny, color=colorShort)
-//plotshape(sellSignal and showsignals ? dn : na, title="Sell", text="Sell", location=location.absolute, style=shape.labeldown, size=size.tiny, color=colorShort, textcolor=color.white)
-
-mPlot = plot(ohlc4, title="", style=plot.style_circles, linewidth=1)
-
-fill(mPlot, upPlot, title="UpTrend Highligter", color=fillColorLong)
-fill(mPlot, dnPlot, title="DownTrend Highligter", color=fillColorShort)
-
-changeCond = trend != trend[1]
 
 //***************************************************************************************************************************************************************
 // Dynamic Levels Breakouts calculations
 //***************************************************************************************************************************************************************
-
 // Calculate maximum and minimum price in the rolling window
 max_level = ta.highest(high, DLBLength)
 min_level = ta.lowest(low, DLBLength)
@@ -109,6 +74,57 @@ plotshape(bearish_breakout and not_bearish, style=shape.triangledown,
    color=colorShort, location=location.abovebar, size=size.small)
 
 //***************************************************************************************************************************************************************
+// Monetary Flow Index calculation
+//***************************************************************************************************************************************************************
+mfi = request.security(symbol=syminfo.tickerid, timeframe="4", expression=ta.mfi(hlc3, MFIlength), lookahead=barmerge.lookahead_off)
+
+//***************************************************************************************************************************************************************
+// SuperTrend calculations
+//***************************************************************************************************************************************************************
+atr2 = ta.sma(ta.tr, Periods)
+atr= changeATR ? ta.atr(Periods) : atr2
+
+up=STsource-(Multiplier*atr)
+up1 = nz(up[1],up)
+up := source[1] > up1 ? math.max(up,up1) : up
+
+dn=STsource+(Multiplier*atr)
+dn1 = nz(dn[1], dn)
+dn := source[1] < dn1 ? math.min(dn, dn1) : dn
+
+trend = 1
+trend := nz(trend[1], trend)
+trend := trend == -1 and source > dn1 ? 1 : trend == 1 and source < up1 ? -1 : trend
+
+upPlot = plot(trend == 1 ? up : na, title="Up Trend", style=plot.style_linebr, linewidth=1, color=colorLong)
+
+buySignal = trend == 1 and trend[1] == -1
+plotshape(buySignal ? up : na, title="UpTrend Begins", location=location.absolute, style=shape.triangleup, size=size.tiny, color=colorLong)
+
+dnPlot = plot(trend == 1 ? na : dn, title="Down Trend", style=plot.style_linebr, linewidth=1, color=colorShort)
+
+sellSignal = trend == -1 and trend[1] == 1
+plotshape(sellSignal ? dn : na, title="DownTrend Begins", location=location.absolute, style=shape.triangledown, size=size.tiny, color=colorShort)
+
+mPlot = plot(ohlc4, title="", style=plot.style_circles, linewidth=1)
+
+fillColorLongWeak = color.new(colorLong, 90)
+fillColorShortWeak = color.new(colorShort, 90)
+
+fill(mPlot, upPlot, title="UpTrend Highligter", color= mfi > 50 ? fillColorLong : fillColorLongWeak)
+fill(mPlot, dnPlot, title="DownTrend Highligter", color= mfi < 50 ? fillColorShort : fillColorShortWeak)
+
+changeCond = trend != trend[1]
+
+//Calculate min and max at trends begining
+var float currentSuperTrendMin = -1e10
+var float currentSuperTrendMax = 1e10
+if buySignal
+    currentSuperTrendMin := low
+if sellSignal
+    currentSuperTrendMax := high
+
+//***************************************************************************************************************************************************************
 // Operation orders
 //***************************************************************************************************************************************************************
 // Entry vars inicialization
@@ -119,8 +135,8 @@ var bool shortEntry = false
 var bool operationalBusy = false
 
 // Entry conditions
-longEntry := false
-shortEntry := false
+longEntry := trend == 1 and (bullish_breakout and not_bullish) and mfi > 50
+shortEntry := trend == -1 and (bearish_breakout and not_bearish) and mfi < 50
 
 // Time parameters for testing
 //if (year == 2025 and month == 1 and dayofmonth >= 6 and dayofmonth <= 7)
