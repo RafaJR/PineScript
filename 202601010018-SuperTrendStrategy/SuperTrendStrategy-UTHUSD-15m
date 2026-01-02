@@ -1,0 +1,192 @@
+//@version=5
+strategy(title="SuperTrend Strategy", shorttitle="superTrendStrategy", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.25, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD, slippage = 175)
+
+// 15m - Kraken - Ethereum / U.S. Dollar
+// https://youtu.be/xxgI9hRwWaI?t=291
+
+// Colors for both moving averages
+colorLong = #00ff08  // Green for bullish movements
+colorShort = #ff0000 // Red for bearish movements
+fillColorLong = color.new(colorLong, 70)
+fillColorShort = color.new(colorShort, 70)
+fillBullishDivergenceColor = color.new(colorLong, 90)
+fillBearishDivergenceColor = color.new(colorShort, 90)
+hidden = color.new(color.black, 100)
+
+// General inputs
+source = input.source(defval=close, title="Prize data source", group="General configuration")
+
+// Dynamic Levels Breakouts configuration
+DLBLength = input.int(defval=14, title="Period", minval=2, maxval=30, group="Dynamic Levels Breakouts")
+
+// SuperTrend configuration
+Periods = input.int(title="ATR Period", defval=14, group="SuperTrend")
+STsource = input(hl2, title="Source", group="SuperTrend")
+Multiplier = input.float(title="ATR Multiplier", step=0.1, defval=3.0, group="SuperTrend")
+changeATR= input.bool(title="Change ATR Calculation Method ?", defval=true, group="SuperTrend")
+showsignals = input.bool(title="Show Buy/Sell Signals ?", defval=true, group="SuperTrend")
+highlighting = input.bool(title="Highlighter On/Off ?", defval=true, group="SuperTrend")
+
+// Monetary Flow Index configuration
+MFIlength = input.int(title="Length", defval=14, minval=1, maxval=2000, group="Monetary Flow Index")
+
+// StopLoss / TakeProffit percents
+stopLossPercent = input.float(defval=1, title="Porcentaje de Stop Loss (%)", group="Risk control", step=0.1)
+takeProfitPercent = input.float(defval=10, title="Porcentaje de Take Profit (%)", group="Risk control", step=0.1)
+srMargin = input.float(defval=5, title = "Prize support or resisteance magin", group="Risk control")
+
+// Time parameters for testing
+currentYear = input.int(defval=2015, title="Year", step=1, group = "Time")
+currentMonth = input.int(defval=1, title="Month", step=1, group = "Time")
+
+
+//***************************************************************************************************************************************************************
+// Dynamic Levels Breakouts calculations
+//***************************************************************************************************************************************************************
+// Calculate maximum and minimum price in the rolling window
+max_level = ta.highest(high, DLBLength)
+min_level = ta.lowest(low, DLBLength)
+
+// Define condtions for dynamic support and resistance levels detection and plotting
+max_color_cond = (max_level[1]==max_level[2]) and (source[1]<=max_level[1]) and (source[1]>=min_level[1])
+min_color_cond = (min_level[1]==min_level[2]) and (source[1]<=max_level[1]) and (source[1]>=min_level[1])
+
+// Define conditional coloring for dynamic support and resistance levels
+max_level_color = max_color_cond ? colorLong:na
+min_level_color = min_color_cond ? colorShort:na
+
+// Define bullish and bearish breakouts condition
+bullish_breakout = ta.crossover (close, max_level[1])
+bearish_breakout = ta.crossunder (close, min_level[1])
+
+//Plot dynamic support and resistance levels
+plot(max_level[1], color = max_level_color,linewidth=1)
+plot(min_level[1], color = min_level_color,linewidth=1)
+
+// Define a current market regime condition
+not_bullish = ta.barssince(bullish_breakout[1])>ta.barssince(bearish_breakout[1])
+not_bearish = ta.barssince(bullish_breakout[1])<ta.barssince(bearish_breakout[1])
+
+// Plot dynamic support and resistance levels breakout signals
+plotshape(bullish_breakout and not_bullish, style=shape.triangleup,
+   color=colorLong, location=location.belowbar, size=size.small)
+plotshape(bearish_breakout and not_bearish, style=shape.triangledown,
+   color=colorShort, location=location.abovebar, size=size.small)
+
+//***************************************************************************************************************************************************************
+// Monetary Flow Index calculation
+//***************************************************************************************************************************************************************
+mfi = request.security(symbol=syminfo.tickerid, timeframe="20", expression=ta.mfi(hlc3, MFIlength), lookahead=barmerge.lookahead_off)
+
+//***************************************************************************************************************************************************************
+// SuperTrend calculations
+//***************************************************************************************************************************************************************
+atr2 = ta.sma(ta.tr, Periods)
+atr= changeATR ? ta.atr(Periods) : atr2
+
+up=STsource-(Multiplier*atr)
+up1 = nz(up[1],up)
+up := source[1] > up1 ? math.max(up,up1) : up
+
+dn=STsource+(Multiplier*atr)
+dn1 = nz(dn[1], dn)
+dn := source[1] < dn1 ? math.min(dn, dn1) : dn
+
+trend = 1
+trend := nz(trend[1], trend)
+trend := trend == -1 and source > dn1 ? 1 : trend == 1 and source < up1 ? -1 : trend
+
+upPlot = plot(trend == 1 ? up : na, title="Up Trend", style=plot.style_linebr, linewidth=1, color=colorLong)
+
+buySignal = trend == 1 and trend[1] == -1
+plotshape(buySignal ? up : na, title="UpTrend Begins", location=location.absolute, style=shape.triangleup, size=size.tiny, color=colorLong)
+
+dnPlot = plot(trend == 1 ? na : dn, title="Down Trend", style=plot.style_linebr, linewidth=1, color=colorShort)
+
+sellSignal = trend == -1 and trend[1] == 1
+plotshape(sellSignal ? dn : na, title="DownTrend Begins", location=location.absolute, style=shape.triangledown, size=size.tiny, color=colorShort)
+
+mPlot = plot(ohlc4, title="", style=plot.style_circles, linewidth=1)
+
+fillColorLongWeak = color.new(colorLong, 90)
+fillColorShortWeak = color.new(colorShort, 90)
+
+fill(mPlot, upPlot, title="UpTrend Highligter", color= mfi > 50 ? fillColorLong : fillColorLongWeak)
+fill(mPlot, dnPlot, title="DownTrend Highligter", color= mfi < 50 ? fillColorShort : fillColorShortWeak)
+
+changeCond = trend != trend[1]
+
+//Calculate min and max at trends begining
+var float currentSuperTrendMin = -1e10
+var float currentSuperTrendMax = 1e10
+if buySignal
+    currentSuperTrendMin := low
+if sellSignal
+    currentSuperTrendMax := high
+
+//***************************************************************************************************************************************************************
+// Operation orders
+//***************************************************************************************************************************************************************
+// Entry vars inicialization
+var bool killLongEntry = false
+var bool killShortEntry = false
+var bool longEntry = false
+var bool shortEntry = false
+var bool operationalBusy = false
+
+// Entry conditions
+longEntry := trend == 1 and (bullish_breakout and not_bullish) and mfi > 50
+shortEntry := trend == -1 and (bearish_breakout and not_bearish) and mfi < 50
+
+// Time parameters for testing
+//if (year == 2025 and month == 1 and dayofmonth >= 6 and dayofmonth <= 7)
+//if (year == currentYear and month == currentMonth)
+//if (year == currentYear)
+if (true)
+    // Operation nomenclature variables
+    var int longOpCount = 0
+    var int shortOpCount = 0
+    var string longOpName = ""
+    var string shortOpName = ""
+
+    if(killLongEntry)
+        strategy.close(id=longOpName)
+        operationalBusy := false
+    if(killShortEntry)
+        strategy.close(id=shortOpName)
+        operationalBusy := false
+    if (longEntry and not operationalBusy)
+        longOpCount += 1
+        longOpName := "Long"
+        longOpComment = longOpName + str.tostring(longOpCount)
+        strategy.entry(id=longOpName, direction=strategy.long, comment=longOpComment)
+        stopLossPrize = strategy.position_avg_price * (1 - takeProfitPercent / 100)
+        takeProfitPrize = strategy.position_avg_price * (1 + takeProfitPercent / 100)
+        strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "TakeProffit" + str.tostring(longOpCount), comment_loss = "SL" + str.tostring(longOpCount))
+        //strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(longOpCount))
+        operationalBusy := true
+    if (shortEntry and not operationalBusy)
+        shortOpCount += 1
+        shortOpName := "Short"
+        shortOpComment = shortOpName + str.tostring(shortOpCount)
+        strategy.entry(id=shortOpName, direction=strategy.short, comment=shortOpComment)
+        stopLossPrize = strategy.position_avg_price * (1 + takeProfitPercent / 100)
+        takeProfitPrize = strategy.position_avg_price * (1 - takeProfitPercent / 100)
+        strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "TP" + str.tostring(shortOpCount), comment_loss = "SL" + str.tostring(longOpCount))
+        //strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount))
+        operationalBusy := true
+    if (strategy.position_size == 0)
+        operationalBusy := false
+    // Stop Loss update
+    //if (operationalBusy)
+    //    bool isLongActive = strategy.position_size > 0
+    //    bool isShortActive = strategy.position_size < 0
+
+    //    if (isLongActive and sarBecomeBullish)
+    //        strategy.exit(id=longOpName, from_entry=longOpName, stop=currentLowest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+    //    if (isShortActive and sarBecomeBearish)
+    //        strategy.exit(id=shortOpName, from_entry=shortOpName, stop=currentHighest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+    //    if (isLongActive and not longEntrySustainable)
+    //        strategy.exit(id=longOpName, from_entry=longOpName, profit=currentHighest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+    //    if (isShortActive and not shortEntrySustainable)
+    //        strategy.exit(id=shortOpName, from_entry=shortOpName, profit=currentLowest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
