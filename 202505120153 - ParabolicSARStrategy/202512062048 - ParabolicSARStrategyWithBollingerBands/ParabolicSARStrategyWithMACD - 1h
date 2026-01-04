@@ -147,33 +147,33 @@ for int i = 0 to lastHighKey
             arrayResisteanceLimits.push(j)
 
 //***************************************************************************************************************************************************************
-// MACD calculation
-//***************************************************************************************************************************************************************
+                 // MACD calculation
+                 //***************************************************************************************************************************************************************
 
-ma(float source, int length, simple string maType) =>
-    switch maType
-        "SMA" => ta.sma(source, length)
-        "EMA" => ta.ema(source, length)
-        "SMMA (RMA)" => ta.rma(source, length)
-        "WMA" => ta.wma(source, length)
-        "VWMA" => ta.vwma(source, length)
+                 ma(float source, int length, simple string maType) =>
+                     switch maType
+                         "SMA" => ta.sma(source, length)
+                         "EMA" => ta.ema(source, length)
+                         "SMMA (RMA)" => ta.rma(source, length)
+                         "WMA" => ta.wma(source, length)
+                         "VWMA" => ta.vwma(source, length)
 
-// Calculate and plot the MACD, signal, and histogram values.
-float maFast = ma(source, fastLenInput, oscTypeInput)
-float maSlow = ma(source, slowLenInput, oscTypeInput)
-float macd   = maFast - maSlow
-float signal = ma(macd, sigLenInput, sigTypeInput)
-float hist   = macd - signal
-//color hColor = hist >= 0 ? hist > hist[1] ? #26a69a : #b2dfdb : hist > hist[1] ? #ffcdd2 : #ff5252
+                 // Calculate and plot the MACD, signal, and histogram values.
+                 float maFast = ma(source, fastLenInput, oscTypeInput)
+                 float maSlow = ma(source, slowLenInput, oscTypeInput)
+                 float macd   = maFast - maSlow
+                 float signal = ma(macd, sigLenInput, sigTypeInput)
+                 float hist   = macd - signal
+                 //color hColor = hist >= 0 ? hist > hist[1] ? #26a69a : #b2dfdb : hist > hist[1] ? #ffcdd2 : #ff5252
 
-//hline(0, "Zero", #787b8680)
-//plot(hist, "Histogram", hColor, style = plot.style_columns)
-//plot(macd, "MACD")
-//plot(signal, "Signal line", #ff6d00)
+                 //hline(0, "Zero", #787b8680)
+                 //plot(hist, "Histogram", hColor, style = plot.style_columns)
+                 //plot(macd, "MACD")
+                 //plot(signal, "Signal line", #ff6d00)
 
-// Create alert conditions.
-//alertcondition(hist[1] >= 0 and hist < 0, "Rising to falling", "MACD histogram switched from a rising to falling state")
-//alertcondition(hist[1] <= 0 and hist > 0, "Falling to rising", "MACD histogram switched from a falling to rising state")
+                 // Create alert conditions.
+                 //alertcondition(hist[1] >= 0 and hist < 0, "Rising to falling", "MACD histogram switched from a rising to falling state")
+                 //alertcondition(hist[1] <= 0 and hist > 0, "Falling to rising", "MACD histogram switched from a falling to rising state")
 
 //***************************************************************************************************************************************************************
 // Chart printing
