@@ -17,7 +17,7 @@ hidden = color.new(color.black, 100)
 source = input.source(defval=close, title="Prize data source", group="General configuration")
 
 // MACD configuration
-int    fastLenInput = input.int(12, "Fast length",   1, group="MACD")
+int    fastLenInput = input.int(13, "Fast length",   1, group="MACD")
 int    slowLenInput = input.int(26, "Slow length",   1, group="MACD")
 int    sigLenInput  = input.int(9,  "Signal length", 1, group="MACD")
 string oscTypeInput = input.string("EMA", "Oscillator MA type", ["EMA", "SMA"], display = display.data_window, group="MACD")
@@ -38,7 +38,8 @@ highlighting = input.bool(title="Highlighter On/Off ?", defval=true, group="Supe
 // StopLoss / TakeProffit percents
 stopLossPercent = input.float(defval=1, title="Porcentaje de Stop Loss (%)", group="Risk control", step=0.1)
 takeProfitPercent = input.float(defval=3, title="Porcentaje de Take Profit (%)", group="Risk control", step=0.1)
-srMargin = input.float(defval=47, title = "Prize support or resisteance magin", group="Risk control")
+srMargin = input.float(defval=20, title = "Prize support or resisteance magin", group="Risk control")
+srMarginMultiplicator = input.float(defval=4.7, title = "Prize support or resisteance magin multiplicator", group="Risk control", step=0.1)
 
 // Time parameters for testing
 currentYear = input.int(defval=2015, title="Year", step=1, group = "Time")
@@ -148,7 +149,7 @@ if (true)
         longOpComment = longOpName + str.tostring(longOpCount)
         strategy.entry(id=longOpName, direction=strategy.long, comment=longOpComment)
         stopLossPrize = currentSuperTrendMin - srMargin
-        takeProfitPrize = strategy.position_avg_price * (1 + takeProfitPercent / 100)
+        takeProfitPrize =  strategy.position_avg_price + (srMargin * srMarginMultiplicator)
         strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "TakeProffit" + str.tostring(longOpCount), comment_loss = "SL" + str.tostring(longOpCount))
         //strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(longOpCount))
         operationalBusy := true
@@ -158,7 +159,7 @@ if (true)
         shortOpComment = shortOpName + str.tostring(shortOpCount)
         strategy.entry(id=shortOpName, direction=strategy.short, comment=shortOpComment)
         stopLossPrize = currentSuperTrendMax + srMargin
-        takeProfitPrize = strategy.position_avg_price * (1 - takeProfitPercent / 100)
+        takeProfitPrize =  strategy.position_avg_price - (srMargin * srMarginMultiplicator)
         strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "TP" + str.tostring(shortOpCount), comment_loss = "SL" + str.tostring(longOpCount))
         //strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount))
         operationalBusy := true
