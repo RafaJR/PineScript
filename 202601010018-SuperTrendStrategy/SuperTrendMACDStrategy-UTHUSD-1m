@@ -1,7 +1,7 @@
 //@version=5
-strategy(title="SuperTrend Strategy", shorttitle="superTrendStrategy", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.25, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD, slippage = 175)
+strategy(title="SuperTrend + MACD Strategy", shorttitle="superTrendSMACDtrategy", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.25, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD, slippage = 175)
 
-// 1m - Kraken - Ethereum / U.S. Dollar
+// 1m - Coinbase - Ethereum / U.S. Dollar
 // https://youtu.be/xxgI9hRwWaI?t=291
 
 // Colors for both moving averages
@@ -17,8 +17,8 @@ hidden = color.new(color.black, 100)
 source = input.source(defval=close, title="Prize data source", group="General configuration")
 
 // MACD configuration
-int    fastLenInput = input.int(13, "Fast length",   1, group="MACD")
-int    slowLenInput = input.int(26, "Slow length",   1, group="MACD")
+int    fastLenInput = input.int(377, "Fast length",   1, group="MACD")//144
+int    slowLenInput = input.int(610, "Slow length",   1, group="MACD")//233
 int    sigLenInput  = input.int(9,  "Signal length", 1, group="MACD")
 string oscTypeInput = input.string("EMA", "Oscillator MA type", ["EMA", "SMA"], display = display.data_window, group="MACD")
 string sigTypeInput = input.string("EMA", "Signal MA type",     ["EMA", "SMA"], display = display.data_window, group="MACD")
@@ -28,18 +28,18 @@ longEntrySustainable = false
 shortEntrySustainable = false
 
 // SuperTrend configuration
-Periods = input.int(title="ATR Period", defval=14, group="SuperTrend")
+Periods = input.int(defval=15, title="ATR Period", group="SuperTrend")
 STsource = input(hl2, title="Source", group="SuperTrend")
-Multiplier = input.float(title="ATR Multiplier", step=0.1, defval=3.0, group="SuperTrend")
+Multiplier = input.float(title="ATR Multiplier", step=0.1, defval=3, group="SuperTrend")
 changeATR= input.bool(title="Change ATR Calculation Method ?", defval=true, group="SuperTrend")
 showsignals = input.bool(title="Show Buy/Sell Signals ?", defval=true, group="SuperTrend")
 highlighting = input.bool(title="Highlighter On/Off ?", defval=true, group="SuperTrend")
 
 // StopLoss / TakeProffit percents
 stopLossPercent = input.float(defval=1, title="Porcentaje de Stop Loss (%)", group="Risk control", step=0.1)
-takeProfitPercent = input.float(defval=3, title="Porcentaje de Take Profit (%)", group="Risk control", step=0.1)
-srMargin = input.float(defval=20, title = "Prize support or resisteance magin", group="Risk control")
-srMarginMultiplicator = input.float(defval=4.7, title = "Prize support or resisteance magin multiplicator", group="Risk control", step=0.1)
+takeProfitPercent = input.float(defval=2.5, title="Porcentaje de Take Profit (%)", group="Risk control", step=0.1)
+srMargin = input.float(defval=19, title = "Prize support or resisteance magin", group="Risk control", step=1)
+winFactor = input.float(defval=9.5, title = "Prize win factor", group="Risk control", step=0.1)
 
 // Time parameters for testing
 currentYear = input.int(defval=2015, title="Year", step=1, group = "Time")
@@ -123,8 +123,8 @@ var bool shortEntry = false
 var bool operationalBusy = false
 
 // Entry conditions
-longEntry := trend == 1 and ta.crossunder(maFast, maSlow)
-shortEntry := trend == -1 and ta.crossover(maFast, maSlow)
+longEntry := buySignal and maFast > maSlow
+shortEntry := sellSignal and maFast < maSlow
 
 // Time parameters for testing
 //if (year == 2025 and month == 1 and dayofmonth >= 6 and dayofmonth <= 7)
@@ -149,7 +149,7 @@ if (true)
         longOpComment = longOpName + str.tostring(longOpCount)
         strategy.entry(id=longOpName, direction=strategy.long, comment=longOpComment)
         stopLossPrize = currentSuperTrendMin - srMargin
-        takeProfitPrize =  strategy.position_avg_price + (srMargin * srMarginMultiplicator)
+        takeProfitPrize = strategy.position_avg_price + ((strategy.position_avg_price - stopLossPrize) * winFactor)
         strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "TakeProffit" + str.tostring(longOpCount), comment_loss = "SL" + str.tostring(longOpCount))
         //strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(longOpCount))
         operationalBusy := true
@@ -159,7 +159,7 @@ if (true)
         shortOpComment = shortOpName + str.tostring(shortOpCount)
         strategy.entry(id=shortOpName, direction=strategy.short, comment=shortOpComment)
         stopLossPrize = currentSuperTrendMax + srMargin
-        takeProfitPrize =  strategy.position_avg_price - (srMargin * srMarginMultiplicator)
+        takeProfitPrize = strategy.position_avg_price - ((stopLossPrize - strategy.position_avg_price) * winFactor)
         strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "TP" + str.tostring(shortOpCount), comment_loss = "SL" + str.tostring(longOpCount))
         //strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount))
         operationalBusy := true
