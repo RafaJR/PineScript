@@ -1,0 +1,110 @@
+//@version=5
+strategy(title="Gap pattern", shorttitle="starterTemplate", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.25, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD, slippage = 175)
+
+// 1D - Kraken - Ethereum / U.S. Dollar
+
+// Colors for both moving averages
+colorLong = #00ff08  // Green for bullish movements
+colorShort = #ff0000 // Red for bearish movements
+fillColorLong = color.new(colorLong, 70)
+fillColorShort = color.new(colorShort, 70)
+fillBullishDivergenceColor = color.new(colorLong, 90)
+fillBearishDivergenceColor = color.new(colorShort, 90)
+hidden = color.new(color.black, 100)
+
+// General inputs
+source = input.source(defval=close, title="Prize data source", group="General configuration")
+
+// StopLoss / TakeProffit percents
+stopLossPercent = input.float(defval=1000, title="Porcentaje de Stop Loss (%)", group="Risk control", step=0.1)
+takeProfitPercent = input.float(defval=1000, title="Porcentaje de Take Profit (%)", group="Risk control", step=0.1)
+
+// Prize support or resisteance magin
+srMargin = input.float(defval=5, title = "Prize support or resisteance magin", group="Risk control")
+proffitFactor = input.float(defval=1, title="Proffit factor", group="Risk control", step=0.1)
+
+// Time parameters for testing
+currentYear = input.int(defval=2015, title="Year", step=1, group = "Time")
+currentMonth = input.int(defval=1, title="Month", step=1, group = "Time")
+
+//***************************************************************************************************************************************************************
+// Start
+//***************************************************************************************************************************************************************
+
+
+//***************************************************************************************************************************************************************
+// Operation orders
+//***************************************************************************************************************************************************************
+// Entry vars inicialization
+var bool killLongEntry = false
+var bool killShortEntry = false
+var bool longEntry = false
+var bool shortEntry = false
+var bool operationalBusy = false
+
+bullishGapPattern = close > open and close[2] > open[2] and low > high[2]
+plotshape(bullishGapPattern, style=shape.triangleup, location=location.belowbar, color=colorLong, size=size.tiny)
+bullishGapPatternMin = bullishGapPattern ? low : na
+bullishGapPatternTP = bullishGapPattern ? close + ((close - bullishGapPatternMin)*proffitFactor) : na
+
+bearshipishGapPattern = close < open and close[2] < open[2] and low < high[2]
+plotshape(bearshipishGapPattern, style=shape.triangledown, location=location.abovebar, color=colorShort, size=size.tiny)
+bearishGapPatternMax = bearshipishGapPattern ? high : na
+bearishGapPatternTP = bearshipishGapPattern ? close + ((close + bearishGapPatternMax)*proffitFactor) : na
+
+// Entry conditions
+longEntry := bullishGapPattern
+shortEntry := bearshipishGapPattern
+
+// Time parameters for testing
+//if (year == 2025 and month == 1 and dayofmonth >= 6 and dayofmonth <= 7)
+//if (year == currentYear and month == currentMonth)
+//if (year == currentYear)
+if (true)
+    // Operation nomenclature variables
+    var int longOpCount = 0
+    var int shortOpCount = 0
+    var string longOpName = ""
+    var string shortOpName = ""
+
+    if(killLongEntry)
+        strategy.close(id=longOpName)
+        operationalBusy := false
+    if(killShortEntry)
+        strategy.close(id=shortOpName)
+        operationalBusy := false
+    if (longEntry and not operationalBusy)
+        longOpCount += 1
+        longOpName := "Long"
+        longOpComment = longOpName + str.tostring(longOpCount)
+        strategy.entry(id=longOpName, direction=strategy.long, comment=longOpComment)
+        stopLossPrize = bullishGapPatternMin
+        takeProfitPrize = bullishGapPatternTP
+        strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "TakeProffit" + str.tostring(longOpCount), comment_loss = "SL" + str.tostring(longOpCount))
+        //strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(longOpCount))
+        operationalBusy := true
+    if (shortEntry and not operationalBusy)
+        shortOpCount += 1
+        shortOpName := "Short"
+        shortOpComment = shortOpName + str.tostring(shortOpCount)
+        strategy.entry(id=shortOpName, direction=strategy.short, comment=shortOpComment)
+        stopLossPrize = bearishGapPatternMax
+        takeProfitPrize = bearishGapPatternTP
+        strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "TP" + str.tostring(shortOpCount), comment_loss = "SL" + str.tostring(longOpCount))
+        //strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount))
+        operationalBusy := true
+    if (strategy.position_size == 0)
+        operationalBusy := false
+    // Stop Loss update
+    //if (operationalBusy)
+    //    bool isLongActive = strategy.position_size > 0
+    //    bool isShortActive = strategy.position_size < 0
+
+    //    if (isLongActive and sarBecomeBullish)
+    //        strategy.exit(id=longOpName, from_entry=longOpName, stop=currentLowest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+    //    if (isShortActive and sarBecomeBearish)
+    //        strategy.exit(id=shortOpName, from_entry=shortOpName, stop=currentHighest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+    //    if (isLongActive and not longEntrySustainable)
+    //        strategy.exit(id=longOpName, from_entry=longOpName, profit=currentHighest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+    //    if (isShortActive and not shortEntrySustainable)
+    //        strategy.exit(id=shortOpName, from_entry=shortOpName, profit=currentLowest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
