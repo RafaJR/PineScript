@@ -1,0 +1,38 @@
+El color de de las lineas de pelotillas centrales se controla aquí:
+TrendBar1Color = TrendBar1 == "N/A" ? colorNeutral :
+   TrendBar1 == "MACD Crossover - 12, 26, 9" ? TrendBarMACDColor :
+   TrendBar1 == "MACD Crossover - Fast - 8, 21, 5" ? TrendBarFastMACDColor :
+   TrendBar1 == "Mom Dad Cross (Top Dog Trading)" ? TrendBarMomOverDadColor :
+   TrendBar1 == "DAD Direction (Top Dog Trading)" ? TrendBarDadDirectionColor :
+   TrendBar1 == "RSI Signal Line Cross - RSI 13, Sig 21" ? TrendBarRSISigCrossColor :
+   TrendBar1 == "RSI 5: > or < 50" ? TrendBarRSI5Color :
+   TrendBar1 == "RSI 13: > or < 50" ? TrendBarRSI13Color :
+   TrendBar1 == "Trend Candles" ? TrendBarTrend_Candle_Color :
+   TrendBar1 == "MA Crossover" ? TrendBarMACrossColor : colorNeutral
+
+TrendBar2Color = TrendBar2 == "N/A" ? na :
+   TrendBar2 == "MACD Crossover - 12, 26, 9" ? TrendBarMACDColor :
+   TrendBar2 == "MACD Crossover - Fast - 8, 21, 5" ? TrendBarFastMACDColor :
+   TrendBar2 == "Mom Dad Cross (Top Dog Trading)" ? TrendBarMomOverDadColor :
+   TrendBar2 == "DAD Direction (Top Dog Trading)" ? TrendBarDadDirectionColor :
+   TrendBar2 == "RSI Signal Line Cross - RSI 13, Sig 21" ? TrendBarRSISigCrossColor :
+   TrendBar2 == "RSI 5: > or < 50" ? TrendBarRSI5Color :
+   TrendBar2 == "RSI 13: > or < 50" ? TrendBarRSI13Color :
+   TrendBar2 == "Trend Candles" ? TrendBarTrend_Candle_Color :
+   TrendBar2 == "MA Crossover" ? TrendBarMACrossColor : na
+
+TrendBar3Color = TrendBar3 == "N/A" ? na :
+   TrendBar3 == "MACD Crossover - 12, 26, 9" ? TrendBarMACDColor :
+   TrendBar3 == "MACD Crossover - Fast - 8, 21, 5" ? TrendBarFastMACDColor :
+   TrendBar3 == "Mom Dad Cross (Top Dog Trading)" ? TrendBarMomOverDadColor :
+   TrendBar3 == "DAD Direction (Top Dog Trading)" ? TrendBarDadDirectionColor :
+   TrendBar3 == "RSI Signal Line Cross - RSI 13, Sig 21" ? TrendBarRSISigCrossColor :
+   TrendBar3 == "RSI 5: > or < 50" ? TrendBarRSI5Color :
+   TrendBar3 == "RSI 13: > or < 50" ? TrendBarRSI13Color :
+   TrendBar3 == "Trend Candles" ? TrendBarTrend_Candle_Color :
+   TrendBar3 == "MA Crossover" ? TrendBarMACrossColor : na
+
+ Cada TrendBar*Color se corresponde con una línea de pelotillas.
+ Cada color depende de una TrendBar* (1,2,3) para tomar el color de una correspondiente variable cuyo color
+ se establece con otro calculo anterior. Por ejemplo:
+    TrendBarMACDColor = MACDHistogramCross ? colorLong : colorShort

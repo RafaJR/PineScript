@@ -1,7 +1,7 @@
 //@version=5
 strategy(title="3AverangeSystem", shorttitle="3AverangeSystem", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.25, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD, slippage = 175)
 
-// 1h - Coinbase - Ethereum / U.S. Dollar
+// 15m - Kraken - Ethereum / U.S. Dollar
 
 // Colors for both moving averages
 colorLong = #00ff08  // Green for bullish movements
@@ -19,7 +19,7 @@ maxSRLimits = input.int(defval=20, minval=2, maxval=50, title="Max support/resis
 
 // StopLoss / TakeProffit percents
 stopLossPercent = input.float(defval=1, title="Porcentaje de Stop Loss (%)", group="Risk control", step=0.1)
-takeProfitPercent = input.float(defval=22, title="Porcentaje de Take Profit (%)", group="Risk control", step=1)
+takeProfitPercent = input.float(defval=6, title="Porcentaje de Take Profit (%)", group="Risk control", step=1)
 
 // Prize support or resisteance magin
 srMargin = input.float(defval=5, title = "Prize support or resisteance magin", group="Risk control")
