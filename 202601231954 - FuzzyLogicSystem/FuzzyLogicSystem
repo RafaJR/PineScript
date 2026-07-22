@@ -1,133 +1,490 @@
 //@version=5
-strategy(title="FuzzyLogicSystem", shorttitle="starterTemplate", overlay=true, pyramiding=0, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.25, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD, slippage = 175)
+indicator(title="Trend Meter")
 
-// 1D - Coinbase - Bitcoin / U.S. Dollar
+// Inputs / Menus
+PosNegPressure = input.bool(true, "Pos / Neg Pressure", tooltip= "Positive Pressure   = RSI14 and Wave Trend Over Sold with WT Delta Pointing Up                                                               Negative Pressure = RSI14 and Wave Trend Over Bought with WT Delta Pointing Down", group = "Signals")
+TMSetups       = input.bool(true, "Trend Meter Signal", tooltip="All 3 Trend Meters Now Align", group = "Signals")
+TMSetupsANDWT  = input.bool(true, "Wave Trend Cross Aligns with Trend Meter Signal",            group = "Signals")
+TrendBar1 = input.string(title="Trend Meter 1", defval="MACD Crossover - Fast - 8, 21, 5", options=["MACD Crossover - 12, 26, 9", "MACD Crossover - Fast - 8, 21, 5", "Mom Dad Cross (Top Dog Trading)", "RSI Signal Line Cross - RSI 13, Sig 21", "RSI 13: > or < 50", "RSI 5: > or < 50", "Trend Candles", "N/A"],   group = "Trend Meters")
+TrendBar2 = input.string(title="Trend Meter 2", defval="RSI 13: > or < 50", options=["MACD Crossover - 12, 26, 9", "MACD Crossover - Fast - 8, 21, 5", "Mom Dad Cross (Top Dog Trading)", "RSI Signal Line Cross - RSI 13, Sig 21", "RSI 13: > or < 50", "RSI 5: > or < 50", "Trend Candles", "N/A"],                  group = "Trend Meters")
+TrendBar3 = input.string(title="Trend Meter 3", defval="RSI 5: > or < 50", options=["MACD Crossover - 12, 26, 9", "MACD Crossover - Fast - 8, 21, 5", "Mom Dad Cross (Top Dog Trading)", "RSI Signal Line Cross - RSI 13, Sig 21", "RSI 13: > or < 50", "RSI 5: > or < 50", "Trend Candles", "N/A"],                   group = "Trend Meters")
 
-// Colors for both moving averages
+//********************************************************************************************************************************************************************************************************************
+// On fire booleans
+// Bolitas de la primera línea
+//    isPosNegPressureBullish
+//    isPosNegPressureBearish
+// Iconos de la segunda línea
+//    isBullishTrendBar
+//    isBearishTrendBar
+// Primera barra
+//    isBullishTrendBar4 = TrendBar4 != "N/A" and CrossoverType2
+//    isBearishTrendBar4 =  TrendBar4 != "N/A" and not CrossoverType2
+// Segunda barra
+//    isBullishTrendBar5
+//    isBearishTrendBar5
+
+// RSI
+//    RSI13Above50
+//    RSISigCross
+//
+//********************************************************************************************************************************************************************************************************************
+
+// colors
 colorLong = #00ff08  // Green for bullish movements
 colorShort = #ff0000 // Red for bearish movements
-fillColorLong = color.new(colorLong, 70)
-fillColorShort = color.new(colorShort, 70)
-fillColorLongWeak = color.new(colorLong, 90)
-fillColorShortWeak = color.new(colorShort, 90)
-fillBullishDivergenceColor = color.new(colorLong, 90)
-fillBearishDivergenceColor = color.new(colorShort, 90)
-hidden = color.new(color.black, 100)
+colorNeutral = #494949a1 // Grey color for ?
 
-// General inputs
-source = input.source(defval=close, title="Prize data source", group="General configuration")
+////////////////Signals - Wave Trend/////////////////////////////////////////////////////////////////////////////////////////////////
+// Wave Trend - RSI
+RSIMC = ta.rsi(close, 14)
 
-// Averange calculation parameters
-maType = input.string("VWMA", "Basis MA Type", options = ["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="Averange")
-int averageFastLength = input.int(defval=50, title="Averange", group="Averange", step=1)
-int averageSlowLength = input.int(defval=200, title="Averange", group="Slow averange", step=1)
+// Wave Trend
+ap = hlc3
+n1 = 9
+n2 = 12
+esa = ta.ema(ap, n1)
+de = ta.ema(math.abs(ap - esa), n1)
+ci = (ap - esa) / (0.015 * de)
+tci = ta.ema(ci, n2)
+wt1 = tci
+wt2 = ta.sma(wt1, 3)
 
-// StopLoss / TakeProffit percents
-stopLossPercent = input.float(defval=1000, title="Porcentaje de Stop Loss (%)", group="Risk control", step=0.1)
-takeProfitPercent = input.float(defval=1000, title="Porcentaje de Take Profit (%)", group="Risk control", step=0.1)
+YellowWave= wt1 -wt2
 
-// Prize support or resisteance magin
-srMargin = input.float(defval=5, title = "Prize support or resisteance magin", group="Risk control")
+obLevel2 = 60
+obLevel = 50
+osLevel = -50
+osLevel2 = -60
 
-// Time parameters for testing
-currentYear = input.int(defval=2015, title="Year", step=1, group = "Time")
-currentMonth = input.int(defval=1, title="Month", step=1, group = "Time")
+// Wave Trend - Conditions
 
-//***************************************************************************************************************************************************************
-// Averange calculations
-//***************************************************************************************************************************************************************
-// Setting averange type
-maSource(float source, int length, simple string maType) =>
-    switch maType
-        "SMA" => ta.sma(source, length)
-        "EMA" => ta.ema(source, length)
-        "SMMA (RMA)" => ta.rma(source, length)
-        "WMA" => ta.wma(source, length)
-        "VWMA" => ta.vwma(source, length)
+WTCross = ta.cross(wt1, wt2)
+WTCrossUp = wt2 - wt1 <= 0
+WTCrossDown = wt2 - wt1 >= 0
+WTOverSold = wt2 <= osLevel2
+WTOverBought = wt2 >= obLevel2
 
-// Averages calculation
-float fastAverage = maSource(source, averageFastLength, maType)
-float slowAverage = maSource(source, averageSlowLength, maType)
+// MA Inputs
+ShowTrendBar1 = input.bool(true, "Trend Bar 1", group = "Trend Bar 1", inline = "Trend Bar 1")
+ShowTrendBar2 = input.bool(true, "Trend Bar 2", group = "Trend Bar 2", inline = "Trend Bar 2")
+TrendBar4 = input.string(title="", defval="MA Crossover", options=["MA Crossover", "MA Direction - Fast MA - TB1", "MA Direction - Slow MA - TB1"], group = "Trend Bar 1", inline = "Trend Bar 1")
+TrendBar5 = input.string(title="", defval="MA Crossover", options=["MA Crossover", "MA Direction - Fast MA - TB2", "MA Direction - Slow MA - TB2"], group = "Trend Bar 2", inline = "Trend Bar 2")
 
-fastAverageIsBullish = fastAverage < source
-fastAverageIsBearish = fastAverage > source
-slowAverageIsBullish = slowAverage < fastAverage
-slowAverageIsBearish = slowAverage > fastAverage
+MA1_Length = input.int(5,  title='Fast MA', minval=1,                             group = "Trend Bar 1", inline = "TB1 Fast")
+MA1_Type   = input.string(    title='',        defval="EMA", options=["EMA", "SMA"], group = "Trend Bar 1", inline = "TB1 Fast")
 
-// Averange plotting
-fastAverageColor = fastAverageIsBullish ? colorLong : colorShort
-slowAverageColor = slowAverageIsBullish ? colorLong : colorShort
-fastAveragePlot = plot(series=fastAverage, title="Fast Averane", color=fastAverageColor, linewidth = 1)
-slowAveragePlot = plot(series=slowAverage, title="Slow Average", color=slowAverageColor, linewidth = 2)
-fillAveragesColor = slowAverageIsBullish and fastAverageIsBullish ?
- fillColorLong : slowAverageIsBullish and fastAverageIsBearish ? fillColorLongWeak :
-  slowAverageIsBearish and fastAverageIsBearish ? fillColorShort : slowAverageIsBearish and fastAverageIsBullish ? fillColorShortWeak :
-  hidden
-fill(fastAveragePlot, slowAveragePlot, color=fillAveragesColor, fillgaps=true)
+MA2_Length = input.int(11, title='Slow MA', minval=1,                             group = "Trend Bar 1", inline = "TB1 Slow")
+MA2_Type   = input.string(    title='',        defval="EMA", options=["EMA", "SMA"], group = "Trend Bar 1", inline = "TB1 Slow")
 
-//***************************************************************************************************************************************************************
-// Operation orders
-//***************************************************************************************************************************************************************
-// Entry vars inicialization
-var bool killLongEntry = false
-var bool killShortEntry = false
-var bool longEntry = false
-var bool shortEntry = false
-var bool operationalBusy = false
+MA3_Length = input.int(13, title='Fast MA', minval=1,                             group = "Trend Bar 2", inline = "TB2 Fast")
+MA3_Type   = input.string(    title='',        defval="EMA", options=["EMA", "SMA"], group = "Trend Bar 2", inline = "TB2 Fast")
 
-// Entry conditions
-longEntry := false
-shortEntry := false
+MA4_Length = input.int(36, title='Slow MA', minval=1,                             group = "Trend Bar 2", inline = "TB2 Slow")
+MA4_Type   = input.string(    title='',        defval="SMA", options=["EMA", "SMA"], group = "Trend Bar 2", inline = "TB2 Slow")
 
-// Time parameters for testing
-//if (year == 2025 and month == 1 and dayofmonth >= 6 and dayofmonth <= 7)
-//if (year == currentYear and month == currentMonth)
-//if (year == currentYear)
-if (true)
-    // Operation nomenclature variables
-    var int longOpCount = 0
-    var int shortOpCount = 0
-    var string longOpName = ""
-    var string shortOpName = ""
 
-    if(killLongEntry)
-        strategy.close(id=longOpName)
-        operationalBusy := false
-    if(killShortEntry)
-        strategy.close(id=shortOpName)
-        operationalBusy := false
-    if (longEntry and not operationalBusy)
-        longOpCount += 1
-        longOpName := "Long"
-        longOpComment = longOpName + str.tostring(longOpCount)
-        strategy.entry(id=longOpName, direction=strategy.long, comment=longOpComment)
-        stopLossPrize = strategy.position_avg_price * (1 - takeProfitPercent / 100)
-        takeProfitPrize = strategy.position_avg_price * (1 + takeProfitPercent / 100)
-        strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "TakeProffit" + str.tostring(longOpCount), comment_loss = "SL" + str.tostring(longOpCount))
-        //strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(longOpCount))
-        operationalBusy := true
-    if (shortEntry and not operationalBusy)
-        shortOpCount += 1
-        shortOpName := "Short"
-        shortOpComment = shortOpName + str.tostring(shortOpCount)
-        strategy.entry(id=shortOpName, direction=strategy.short, comment=shortOpComment)
-        stopLossPrize = strategy.position_avg_price * (1 + takeProfitPercent / 100)
-        takeProfitPrize = strategy.position_avg_price * (1 - takeProfitPercent / 100)
-        strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, limit=takeProfitPrize, comment_profit = "TP" + str.tostring(shortOpCount), comment_loss = "SL" + str.tostring(longOpCount))
-        //strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, comment_profit = "PROFIT" + str.tostring(shortOpCount))
-        operationalBusy := true
-    if (strategy.position_size == 0)
-        operationalBusy := false
-    // Stop Loss update
-    //if (operationalBusy)
-    //    bool isLongActive = strategy.position_size > 0
-    //    bool isShortActive = strategy.position_size < 0
+// MA Calculations
+Close = close
 
-    //    if (isLongActive and sarBecomeBullish)
-    //        strategy.exit(id=longOpName, from_entry=longOpName, stop=currentLowest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
-    //    if (isShortActive and sarBecomeBearish)
-    //        strategy.exit(id=shortOpName, from_entry=shortOpName, stop=currentHighest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
-    //    if (isLongActive and not longEntrySustainable)
-    //        strategy.exit(id=longOpName, from_entry=longOpName, profit=currentHighest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
-    //    if (isShortActive and not shortEntrySustainable)
-    //        strategy.exit(id=shortOpName, from_entry=shortOpName, profit=currentLowest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+MA1 = if MA1_Type == "SMA"
+    ta.sma(Close, MA1_Length)
+else
+    ta.ema(Close, MA1_Length)
+
+MA2 = if MA2_Type == "SMA"
+    ta.sma(Close, MA2_Length)
+else
+    ta.ema(Close, MA2_Length)
+
+MA3 = if MA3_Type == "SMA"
+    ta.sma(Close, MA3_Length)
+else
+    ta.ema(Close, MA3_Length)
+
+MA4 = if MA4_Type == "SMA"
+    ta.sma(Close, MA4_Length)
+else
+    ta.ema(Close, MA4_Length)
+
+// MA Crossover Condition
+MACrossover1 = MA1 > MA2 ? true : false
+MACrossover2 = MA3 > MA4 ? true : false
+
+// MA Direction Condition
+MA1Direction = MA1 > MA1[1] ? true : false
+MA2Direction = MA2 > MA2[1] ? true : false
+MA3Direction = MA3 > MA3[1] ? true : false
+MA4Direction = MA4 > MA4[1] ? true : false
+
+// MA Direction Change Condition
+MA1PositiveDirectionChange = MA1Direction and not MA1Direction[1] ? true : false
+MA2PositiveDirectionChange = MA2Direction and not MA2Direction[1] ? true : false
+MA3PositiveDirectionChange = MA3Direction and not MA3Direction[1] ? true : false
+MA4PositiveDirectionChange = MA4Direction and not MA4Direction[1] ? true : false
+MA1NegativeDirectionChange = not MA1Direction and MA1Direction[1] ? true : false
+MA2NegativeDirectionChange = not MA2Direction and MA2Direction[1] ? true : false
+MA3NegativeDirectionChange = not MA3Direction and MA3Direction[1] ? true : false
+MA4NegativeDirectionChange = not MA4Direction and MA4Direction[1] ? true : false
+
+// MACD and MOM & DAD - Top Dog Trading
+// Standard MACD Calculations
+MACDfastMA = 12
+MACDslowMA = 26
+MACDsignalSmooth = 9
+
+MACDLine = ta.ema(close, MACDfastMA) - ta.ema(close, MACDslowMA)
+SignalLine = ta.ema(MACDLine, MACDsignalSmooth)
+MACDHistogram = MACDLine - SignalLine
+
+// MACD- Background Color Change Condition
+MACDHistogramCross = MACDHistogram > 0 ? true : false
+MACDLineOverZero = MACDLine > 0 ? true : false
+MACDLineOverZeroandHistogramCross = MACDHistogramCross and MACDLineOverZero ? true : false
+MACDLineUnderZeroandHistogramCross = not MACDHistogramCross and not MACDLineOverZero ? true : false
+
+// Fast MACD Calculations
+FastMACDfastMA = 8
+FastMACDslowMA = 21
+FastMACDsignalSmooth = 5
+FastMACDLine = ta.ema(close, FastMACDfastMA) - ta.ema(close, FastMACDslowMA)
+FastSignalLine = ta.ema(FastMACDLine, FastMACDsignalSmooth)
+FastMACDHistogram = FastMACDLine - FastSignalLine
+
+// Fast MACD- Background Color Change Condition
+FastMACDHistogramCross = FastMACDHistogram > 0 ? true : false
+FastMACDLineOverZero = FastMACDLine > 0 ? true : false
+FastMACDLineOverZeroandHistogramCross = FastMACDHistogramCross and FastMACDLineOverZero ? true : false
+FastMACDLineUnderZeroandHistogramCross = not FastMACDHistogramCross and not FastMACDLineOverZero ? true : false
+
+// Top Dog Trading - Mom Dad Calculations
+TopDog_Fast_MA = 5
+TopDog_Slow_MA = 20
+TopDog_Sig = 30
+TopDogMom = ta.ema(close, TopDog_Fast_MA) - ta.ema(close, TopDog_Slow_MA)
+TopDogDad = ta.ema(TopDogMom, TopDog_Sig)
+
+// Top Dog Dad - Background Color Change Condition
+TopDogDadDirection = TopDogDad > TopDogDad[1] ? true : false
+TopDogMomOverDad = TopDogMom > TopDogDad ? true : false
+TopDogMomOverZero = TopDogMom > 0 ? true : false
+TopDogDadDirectandMomOverZero = TopDogDadDirection and TopDogMomOverZero ? true : false
+TopDogDadDirectandMomUnderZero = not TopDogDadDirection and not TopDogMomOverZero ? true : false
+
+////// Trend Barmeter Calculations //////
+// UCS_Trend / Trend Candles Trend Barmeter Calculations
+haclose = ohlc4
+haopen = 0.0
+haopen := na(haopen[1]) ? (open + close) / 2 : (haopen[1] + haclose[1]) / 2
+
+ccolor = haclose - haopen > 0 ? true : false
+
+inside6 = haopen <= math.max(haopen[6], haclose[6]) and haopen >= math.min(haopen[6], haclose[6]) and
+   haclose <= math.max(haopen[6], haclose[6]) and haclose >= math.min(haopen[6], haclose[6]) ?
+   true : false
+inside5 = haopen <= math.max(haopen[5], haclose[5]) and haopen >= math.min(haopen[5], haclose[5]) and
+   haclose <= math.max(haopen[5], haclose[5]) and haclose >= math.min(haopen[5], haclose[5]) ?
+   true : false
+inside4 = haopen <= math.max(haopen[4], haclose[4]) and haopen >= math.min(haopen[4], haclose[4]) and
+   haclose <= math.max(haopen[4], haclose[4]) and haclose >= math.min(haopen[4], haclose[4]) ?
+   true : false
+inside3 = haopen <= math.max(haopen[3], haclose[3]) and haopen >= math.min(haopen[3], haclose[3]) and
+   haclose <= math.max(haopen[3], haclose[3]) and haclose >= math.min(haopen[3], haclose[3]) ?
+   true : false
+inside2 = haopen <= math.max(haopen[2], haclose[2]) and haopen >= math.min(haopen[2], haclose[2]) and
+   haclose <= math.max(haopen[2], haclose[2]) and haclose >= math.min(haopen[2], haclose[2]) ?
+   true : false
+inside1 = haopen <= math.max(haopen[1], haclose[1]) and haopen >= math.min(haopen[1], haclose[1]) and
+   haclose <= math.max(haopen[1], haclose[1]) and haclose >= math.min(haopen[1], haclose[1]) ?
+   true : false
+
+colorvalue = inside6 ? ccolor[6] : inside5 ? ccolor[5] : inside4 ? ccolor[4] :
+   inside3 ? ccolor[3] : inside2 ? ccolor[2] : inside1 ? ccolor[1] : ccolor
+
+TrendBarTrend_Candle_Color = colorvalue ?colorLong : colorShort
+TrendBarTrend_Candle = colorvalue ? true : false
+
+// RSI 5 Trend Barmeter Calculations
+RSI5 = ta.rsi(close, 5)
+RSI5Above50 = RSI5 > 50 ? true : false
+RSI5Color = RSI5Above50 ? colorLong : colorShort
+TrendBarRSI5Color = RSI5Above50 ? colorLong : colorShort
+
+// RSI 13 Trend Barmeter Calculations
+RSI13 = ta.rsi(close, 13)
+
+// Linear Regression Calculation For RSI Signal Line
+SignalLineLength1 = 21
+x = bar_index
+y = RSI13
+x_ = ta.sma(x, SignalLineLength1)
+y_ = ta.sma(y, SignalLineLength1)
+mx = ta.stdev(x, SignalLineLength1)
+my = ta.stdev(y, SignalLineLength1)
+c = ta.correlation(x, y, SignalLineLength1)
+slope = c * (my / mx)
+inter = y_ - slope * x_
+LinReg1 = x * slope + inter
+
+RSISigDirection = LinReg1 > LinReg1[1]
+RSISigCross = RSI13 > LinReg1
+RSI13Above50 = RSI13 > 50
+
+// Trend Barmeter Color Calculation
+RSI13Color = RSI13Above50 ? colorLong : colorShort
+TrendBarRSI13Color = RSI13Above50 ? colorLong : colorShort
+TrendBarRSISigCrossColor = RSISigCross ? colorLong : colorShort
+TrendBarMACDColor = MACDHistogramCross ? colorLong : colorShort
+TrendBarFastMACDColor = FastMACDHistogramCross ? colorLong : colorShort
+TrendBarMACrossColor = MACrossover1 ? colorLong : colorShort
+TrendBarMomOverDadColor = TopDogMomOverDad ? colorLong : colorShort
+TrendBarDadDirectionColor = TopDogDadDirection ? colorLong : colorShort
+
+TrendBar1Result = TrendBar1 == "MA Crossover" ? MACrossover1 :
+   TrendBar1 == "MACD Crossover - 12, 26, 9" ? MACDHistogramCross :
+   TrendBar1 == "MACD Crossover - Fast - 8, 21, 5" ? FastMACDHistogramCross :
+   TrendBar1 == "Mom Dad Cross (Top Dog Trading)" ? TopDogMomOverDad :
+   TrendBar1 == "DAD Direction (Top Dog Trading)" ? TopDogDadDirection :
+   TrendBar1 == "RSI Signal Line Cross - RSI 13, Sig 21" ? RSISigCross :
+   TrendBar1 == "RSI 5: > or < 50" ? RSI5Above50 :
+   TrendBar1 == "RSI 13: > or < 50" ? RSI13Above50 :
+   TrendBar1 == "Trend Candles" ? TrendBarTrend_Candle : na
+
+TrendBar2Result = TrendBar2 == "MA Crossover" ? MACrossover1 :
+   TrendBar2 == "MACD Crossover - 12, 26, 9" ? MACDHistogramCross :
+   TrendBar2 == "MACD Crossover - Fast - 8, 21, 5" ? FastMACDHistogramCross :
+   TrendBar2 == "Mom Dad Cross (Top Dog Trading)" ? TopDogMomOverDad :
+   TrendBar2 == "DAD Direction (Top Dog Trading)" ? TopDogDadDirection :
+   TrendBar2 == "RSI Signal Line Cross - RSI 13, Sig 21" ? RSISigCross :
+   TrendBar2 == "RSI 5: > or < 50" ? RSI5Above50 :
+   TrendBar2 == "RSI 13: > or < 50" ? RSI13Above50 :
+   TrendBar2 == "Trend Candles" ? TrendBarTrend_Candle : na
+
+TrendBar3Result = TrendBar3 == "MA Crossover" ? MACrossover1 :
+   TrendBar3 == "MACD Crossover - 12, 26, 9" ? MACDHistogramCross :
+   TrendBar3 == "MACD Crossover - Fast - 8, 21, 5" ? FastMACDHistogramCross :
+   TrendBar3 == "Mom Dad Cross (Top Dog Trading)" ? TopDogMomOverDad :
+   TrendBar3 == "DAD Direction (Top Dog Trading)" ? TopDogDadDirection :
+   TrendBar3 == "RSI Signal Line Cross - RSI 13, Sig 21" ? RSISigCross :
+   TrendBar3 == "RSI 5: > or < 50" ? RSI5Above50 :
+   TrendBar3 == "RSI 13: > or < 50" ? RSI13Above50 :
+   TrendBar3 == "Trend Candles" ? TrendBarTrend_Candle : na
+
+TrendBars2Positive = TrendBar1Result and TrendBar2Result or TrendBar1Result and TrendBar3Result or
+   TrendBar2Result and TrendBar3Result ? true : false
+
+TrendBars2Negative = not TrendBar1Result and not TrendBar2Result or
+   not TrendBar1Result and not TrendBar3Result or
+   not TrendBar2Result and not TrendBar3Result ? true : false
+
+TrendBars3Positive =     TrendBar1Result and     TrendBar2Result and     TrendBar3Result ? true : false
+TrendBars3Negative = not TrendBar1Result and not TrendBar2Result and not TrendBar3Result ? true : false
+
+PositiveWaveTrendCross = WTCross and WTCrossUp
+NegativeWaveTrendCross = WTCross and WTCrossDown
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+isBullishTrendBar = TrendBars3Positive and not TrendBars3Positive[1]
+isBearishTrendBar = TrendBars3Negative and not TrendBars3Negative[1]
+
+// Signals Color Calculations
+MSBar2Color = isBullishTrendBar ? colorLong :
+   isBearishTrendBar ? colorShort : colorNeutral
+
+// Trend Barmeter Color Assignments
+TrendBar1Color = TrendBar1 == "N/A" ? colorNeutral :
+   TrendBar1 == "MACD Crossover - 12, 26, 9" ? TrendBarMACDColor :
+   TrendBar1 == "MACD Crossover - Fast - 8, 21, 5" ? TrendBarFastMACDColor :
+   TrendBar1 == "Mom Dad Cross (Top Dog Trading)" ? TrendBarMomOverDadColor :
+   TrendBar1 == "DAD Direction (Top Dog Trading)" ? TrendBarDadDirectionColor :
+   TrendBar1 == "RSI Signal Line Cross - RSI 13, Sig 21" ? TrendBarRSISigCrossColor :
+   TrendBar1 == "RSI 5: > or < 50" ? TrendBarRSI5Color :
+   TrendBar1 == "RSI 13: > or < 50" ? TrendBarRSI13Color :
+   TrendBar1 == "Trend Candles" ? TrendBarTrend_Candle_Color :
+   TrendBar1 == "MA Crossover" ? TrendBarMACrossColor : colorNeutral
+
+TrendBar2Color = TrendBar2 == "N/A" ? na :
+   TrendBar2 == "MACD Crossover - 12, 26, 9" ? TrendBarMACDColor :
+   TrendBar2 == "MACD Crossover - Fast - 8, 21, 5" ? TrendBarFastMACDColor :
+   TrendBar2 == "Mom Dad Cross (Top Dog Trading)" ? TrendBarMomOverDadColor :
+   TrendBar2 == "DAD Direction (Top Dog Trading)" ? TrendBarDadDirectionColor :
+   TrendBar2 == "RSI Signal Line Cross - RSI 13, Sig 21" ? TrendBarRSISigCrossColor :
+   TrendBar2 == "RSI 5: > or < 50" ? TrendBarRSI5Color :
+   TrendBar2 == "RSI 13: > or < 50" ? TrendBarRSI13Color :
+   TrendBar2 == "Trend Candles" ? TrendBarTrend_Candle_Color :
+   TrendBar2 == "MA Crossover" ? TrendBarMACrossColor : na
+
+TrendBar3Color = TrendBar3 == "N/A" ? na :
+   TrendBar3 == "MACD Crossover - 12, 26, 9" ? TrendBarMACDColor :
+   TrendBar3 == "MACD Crossover - Fast - 8, 21, 5" ? TrendBarFastMACDColor :
+   TrendBar3 == "Mom Dad Cross (Top Dog Trading)" ? TrendBarMomOverDadColor :
+   TrendBar3 == "DAD Direction (Top Dog Trading)" ? TrendBarDadDirectionColor :
+   TrendBar3 == "RSI Signal Line Cross - RSI 13, Sig 21" ? TrendBarRSISigCrossColor :
+   TrendBar3 == "RSI 5: > or < 50" ? TrendBarRSI5Color :
+   TrendBar3 == "RSI 13: > or < 50" ? TrendBarRSI13Color :
+   TrendBar3 == "Trend Candles" ? TrendBarTrend_Candle_Color :
+   TrendBar3 == "MA Crossover" ? TrendBarMACrossColor : na
+
+
+CrossoverType2 = TrendBar4 == "DAD Direction (Top Dog Trading)" ? TopDogDadDirection :
+   TrendBar4 == "MACD Crossover" ? MACDHistogramCross :
+   TrendBar4 == "MA Direction - Fast MA - TB1" ? MA1Direction :
+   TrendBar4 == "MA Direction - Slow MA - TB1" ? MA2Direction : MACrossover1
+
+isBullishTrendBar4 = TrendBar4 != "N/A" and CrossoverType2
+isBearishTrendBar4 =  TrendBar4 != "N/A" and not CrossoverType2
+
+TrendBar4Color1 = isBullishTrendBar4 ? colorLong : isBearishTrendBar4 ? colorShort : colorNeutral
+
+
+CrossoverType3 = TrendBar5 == "DAD Direction (Top Dog Trading)" ? TopDogDadDirection :
+   TrendBar5 == "MACD Crossover" ? MACDHistogramCross :
+   TrendBar5 == "MA Direction - Fast MA - TB2" ? MA3Direction :
+   TrendBar5 == "MA Direction - Slow MA - TB2" ? MA4Direction : MACrossover2
+
+isBullishTrendBar5 = TrendBar5 != "N/A" and CrossoverType3
+isBearishTrendBar5 = TrendBar5 != "N/A" and not CrossoverType3
+TrendBar5Color1 = isBullishTrendBar5 ? colorLong : isBearishTrendBar5 ? colorShort : colorNeutral
+
+WTVOB = wt1 >  60
+WTVOS = wt1 < -60
+
+// Weekness / Pos/Neg Pressure
+
+YellowWavePointingUp = YellowWave > YellowWave[1]
+
+RSI14     = ta.rsi(close, 14)
+RSI14OB   = RSI14 > 70 ?     true : false
+RSI14OS   = RSI14 < 30 ?     true : false
+RSI14OBOS = RSI14OB or RSI14OS ? true : false
+
+OBIndicatorsYellowPointingDown   = (RSI14OB or RSI14OB[1]) and WTVOB and not YellowWavePointingUp
+
+OSIndicatorsYellowPointingUp     = (RSI14OS or RSI14OS[1]) and WTVOS and     YellowWavePointingUp
+
+isPosNegPressureBullish = PosNegPressure and OSIndicatorsYellowPointingUp
+isPosNegPressureBearish = PosNegPressure and OBIndicatorsYellowPointingDown
+plot(isPosNegPressureBullish ?      138.5      : na, "Wave Trend - Positive Pressure", color=colorLong, style=plot.style_circles, linewidth=2)
+plot(isPosNegPressureBearish and OBIndicatorsYellowPointingDown ?    138.5      : na, "Wave Trend - Negative Pressure", color=colorShort, style=plot.style_circles, linewidth=2)
+
+alertcondition(OBIndicatorsYellowPointingDown or OSIndicatorsYellowPointingUp,      title=' -   Pos / Neg Pressure',  message='Pos / Neg Pressure - Trend Meter')
+
+plot(TMSetups ?                                             134.5      : na, title = "All 3 Trend Meters Now Align", style=plot.style_circles, color=MSBar2Color, linewidth=3)
+plot(TMSetupsANDWT and ((PositiveWaveTrendCross and TrendBars3Positive) or (NegativeWaveTrendCross and TrendBars3Negative)) ?   134.5 : na, title="Wave Trend X & All 3 Trend Meters Now Align", style=plot.style_cross, color=MSBar2Color, linewidth=4)
+
+// Trend Barmeter Plots
+plot(128.5, title="Trend Meter 1", style=plot.style_circles, color=TrendBar1Color, linewidth=2)
+plot(122.5, title="Trend Meter 2", style=plot.style_circles, color=TrendBar2Color, linewidth=2)
+plot(116.5, title="Trend Meter 3", style=plot.style_circles, color=TrendBar3Color, linewidth=2)
+
+
+plot(ShowTrendBar1 and     ShowTrendBar2 ? 110    : na, title="Trend Bar 1 - Thin Line",  style=plot.style_line, color=TrendBar4Color1, linewidth=4)
+plot(ShowTrendBar1 and not ShowTrendBar2 ? 110    : na, title="Trend Bar 1 - Thick Line", style=plot.style_line, color=TrendBar4Color1, linewidth=9)
+
+plot(ShowTrendBar2 and     ShowTrendBar1 ? 104.5  : na, title="Trend Bar 2 - Thin Line",  style=plot.style_line, color=TrendBar5Color1, linewidth=6)
+plot(ShowTrendBar2 and not ShowTrendBar1 ? 110    : na, title="Trend Bar 2 - Thick Line", style=plot.style_line, color=TrendBar5Color1, linewidth=9)
+
+
+
+// Background Highlights
+
+TrendBar3BarsSame = TrendBars3Positive ? colorLong : TrendBars3Negative ? colorShort : na
+
+TMa = hline(113.7, color=color.new(color.white, 100))
+
+TMb = hline(131.3, color=color.new(color.white, 100))
+
+fill(TMa, TMb, color=color.new(TrendBar3BarsSame, 91), title="Trend Meter Background Highlight - 3 Trend Meter Conditions Met")
+
+
+// Alerts & Conditions - MA Crossing & Background Color
+
+
+alertcondition(isBullishTrendBar, title=' --  3 TMs Turn Green', message='All 3 Trend Meters Turn  Green - Trend Meter')
+alertcondition(isBearishTrendBar, title=' --  3 TMs Turn Red',   message='All 3 Trend Meters Turn  Red - Trend Meter')
+alertcondition(isBullishTrendBar or isBearishTrendBar, title=' -- 3 TMs Change to Same Color', message='All 3 Trend Meters Change to Same Color - Trend Meter')
+
+
+alertcondition(PositiveWaveTrendCross  and TrendBars3Positive, title="--- 3 TMs Turn Green & WaveTrend X", message='Green - Wave Trend Signal - Aligns with 3 Trend Meters - Trend Meter')
+alertcondition(NegativeWaveTrendCross  and TrendBars3Negative, title="--- 3 TMs Turn Red & WaveTrend X",   message='Red - Wave Trend Signal - Aligns with 3 Trend Meters - Trend Meter')
+alertcondition((PositiveWaveTrendCross and TrendBars3Positive) or (NegativeWaveTrendCross and TrendBars3Negative), title="--- 3 TMs Change to Same Color & WT X", message='Red / Green - Wave Trend Signal - Aligns with 3 Trend Meters - Trend Meter')
+
+
+
+TrendMetersNoLongerAlign = ((not TrendBars3Positive or not TrendBars3Negative) and TrendBars3Positive[1]) or ((not TrendBars3Positive or not TrendBars3Negative) and TrendBars3Negative[1])
+
+alertcondition(TrendMetersNoLongerAlign, title='---- 3 Trend Meters No Longer Align', message='3 Trend Meters No Longer Align - Trend Meter')
+
+
+RapidColorChangePositive = TrendBars3Positive and (TrendBars3Negative[1] or TrendBars3Negative[2])
+RapidColorChangeNegative = TrendBars3Negative and (TrendBars3Positive[1] or TrendBars3Positive[2])
+
+alertcondition(RapidColorChangePositive, title='All 3 TMs Rapid Change Red to Green', message='All 3 Trend Meters Rapid Change Red to Green - Trend Meter')
+alertcondition(RapidColorChangeNegative, title='All 3 TMs Rapid Change Green to Red', message='All 3 Trend Meters Rapid Change Green to Red - Trend Meter')
+alertcondition(RapidColorChangePositive or RapidColorChangeNegative, title='All 3 TMs Rapid Change to Same Color', message='All 3 Trend Meters Rapid Change to Same Color - Trend Meter')
+
+
+MaxValueMACrossUp   = ta.crossover( ta.ema(Close, 5), ta.ema(Close, 11))
+MaxValueMACrossDown = ta.crossunder(ta.ema(Close, 5), ta.ema(Close, 11))
+
+
+TB1MACrossUp   = ta.crossover( MA1, MA2)
+TB1MACrossDown = ta.crossunder(MA1, MA2)
+
+
+alertcondition(TB1MACrossUp,   title='TB 1 Turns Green', message='Trend Bar 1 - Turns Green - Trend Meter')
+alertcondition(TB1MACrossDown, title='TB 1 Turns Red',   message='Trend Bar 1 - Turns Red - Trend Meter')
+alertcondition(TB1MACrossUp or TB1MACrossDown, title='TB 1 Color Change',   message='Trend Bar 1 - Color Change - Trend Meter')
+
+
+TB2MACrossUp   = ta.crossover(MA3, MA4)
+TB2MACrossDown = ta.crossunder(MA3, MA4)
+
+
+alertcondition(TB2MACrossUp,   title='TB 2 Turns Green', message='Trend Bar 2 - Turns Green - Trend Meter')
+alertcondition(TB2MACrossDown, title='TB 2 Turns Red',   message='Trend Bar 2 - Turns Red - Trend Meter')
+alertcondition(TB2MACrossUp or TB2MACrossDown, title='TB 2 Color Change',   message='Trend Bar 2 - Color Change - Trend Meter')
+
+
+TB1Green  = MA1 > MA2
+TB1Red    = MA1 < MA2
+
+TB2Green  = MA3 > MA4
+TB2Red    = MA3 < MA4
+
+TB12Green = TB1Green and TB2Green and (TB1MACrossUp   or TB2MACrossUp)
+TB12Red   = TB1Red   and TB2Red   and (TB1MACrossDown or TB2MACrossDown)
+
+alertcondition(TB12Green,   title='TBs 1+2 Turn Green', message='Trend Bars 1+2 - Turn Green - Trend Meter')
+alertcondition(TB12Red,     title='TBs 1+2 Turn Red',   message='Trend Bars 1+2 - Turn Red - Trend Meter')
+alertcondition(TB12Green or TB12Red, title='TBs 1+2 Change to Same Color',   message='Trend Bars 1+2 - Change to Same Color - MAs Crossing - Trend Meter')
+
+
+alertcondition(TB12Green  and TrendBars3Positive, title='TBs 1+2 Turn Green with 3 TMs', message='Trend Bars 1+2 - Turn Green with 3 TMs - Trend Meter')
+alertcondition(TB12Red    and TrendBars3Negative, title='TBs 1+2 Turn Red with 3 TMs',   message='Trend Bars 1+2 - Turn Red with 3 TMs- Trend Meter')
+alertcondition((TB12Green and TrendBars3Positive) or (TB12Red and TrendBars3Negative) ,  title='TBs 1+2 Change to Same Color with 3 TMs',   message='Trend Bars 1+2 - Change to Same Color with 3 TMs - Trend Meter')
+
+
+alertcondition(TB1Green   and TrendBars3Positive, title='TB 1 Turns Green with 3 TMs',   message='Trend Bar 1 - Turn Green with 3 TMs - Trend Meter')
+alertcondition(TB1Red     and TrendBars3Negative, title='TB 1 Turns Red with 3 TMs',     message='Trend Bar 1 - Turn Red with 3 TMs- Trend Meter')
+alertcondition((TB1Green  and TrendBars3Positive) or (TB1Red and TrendBars3Negative) ,  title='TB 1 Change to Same Color with 3 TMs',       message='Trend Bar 1 - Change to Same Color with 3 TMs - Trend Meter')
+
+
+alertcondition(TB2Green   and TrendBars3Positive, title='TB 2 Turns Green with 3 TMs',   message='Trend Bar 2 - Turn Green with 3 TMs - Trend Meter')
+alertcondition(TB2Red     and TrendBars3Negative, title='TB 2 Turns Red with 3 TMs',     message='Trend Bar 2 - Turn Red with 3 TMs- Trend Meter')
+alertcondition((TB2Green  and TrendBars3Positive) or (TB2Red and TrendBars3Negative) ,  title='TB 2 Change to Same Color with 3 TMs',       message='Trend Bar 2 - Change to Same Color with 3 TMs - Trend Meter')
+
+
+alertcondition( isBullishTrendBar  and TB1Green, title='3 TMs Turn Green with TB 1', message='All 3 Trend Meters Turn  Green with TB 1 - Trend Meter')
+alertcondition( isBearishTrendBar  and TB1Red,   title='3 TMs Turn Red with TB 1',   message='All 3 Trend Meters Turn  Red with TB 1 - Trend Meter')
+alertcondition((isBullishTrendBar  and TB1Green) or (isBearishTrendBar and TB1Red), title='3 TMs Change Color with TB 1', message='All 3 Trend Meters Change Color with TB 1 - Trend Meter')
+
+
+alertcondition( isBullishTrendBar and TB2Green, title='3 TMs Turn Green with TB 2',  message='All 3 Trend Meters Turn  Green with TB 2 - Trend Meter')
+alertcondition( isBearishTrendBar and TB2Red,   title='3 TMs Turn Red with TB 2',    message='All 3 Trend Meters Turn  Red with TB 2 - Trend Meter')
+alertcondition((isBullishTrendBar and TB2Green) or (isBearishTrendBar and TB2Red), title='3 TMs Change Color with TB 2',  message='All 3 Trend Meters Change Color with TB 2 - Trend Meter')
+
+
+alertcondition( isBullishTrendBar and TB1Green and TB2Green, title='3 TMs Turn Green with TBs 1+2', message='All 3 Trend Meters Turn  Green with Trend Bar 1+2 - Trend Meter')
+alertcondition( isBearishTrendBar and TB1Red   and TB2Red,   title='3 TMs Turn Red with TBs 1+2',   message='All 3 Trend Meters Turn  Red with Trend Bar 1+2 - Trend Meter')
+alertcondition((isBullishTrendBar and TB1Green and TB2Green) or (isBearishTrendBar and TB1Red and TB2Red), title='3 TMs Change Color with TBs 1+2', message='All 3 Trend Meters Change Color with Trend Bar 1+2 - Trend Meter')
