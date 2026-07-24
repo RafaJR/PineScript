@@ -2,12 +2,13 @@
 indicator(title = 'Trend Meter')
 
 // Inputs / Menus
-PosNegPressure = input.bool(true, 'Pos / Neg Pressure', tooltip = 'Positive Pressure   = RSI14 and Wave Trend Over Sold with WT Delta Pointing Up                                                               Negative Pressure = RSI14 and Wave Trend Over Bought with WT Delta Pointing Down', group = 'Signals')
-TMSetups = input.bool(true, 'Trend Meter Signal', tooltip = 'All 3 Trend Meters Now Align', group = 'Signals')
-TMSetupsANDWT = input.bool(true, 'Wave Trend Cross Aligns with Trend Meter Signal', group = 'Signals')
+PosNegPressure = input.bool(defval = true, title = 'Pos / Neg Pressure', tooltip = 'Positive Pressure   = RSI14 and Wave Trend Over Sold with WT Delta Pointing Up                                                               Negative Pressure = RSI14 and Wave Trend Over Bought with WT Delta Pointing Down', group = 'Signals')
+TMSetups = input.bool(defval = true, title = 'Trend Meter Signal', tooltip = 'All 3 Trend Meters Now Align', group = 'Signals')
+TMSetupsANDWT = input.bool(defval = true, title = 'Wave Trend Cross Aligns with Trend Meter Signal', group = 'Signals')
 TrendBar1 = input.string(title = 'Trend Meter 1', defval = 'MACD Crossover - Fast - 8, 21, 5', options = ['MACD Crossover - 12, 26, 9', 'MACD Crossover - Fast - 8, 21, 5', 'Mom Dad Cross (Top Dog Trading)', 'RSI Signal Line Cross - RSI 13, Sig 21', 'RSI 13: > or < 50', 'RSI 5: > or < 50', 'Trend Candles', 'N/A'], group = 'Trend Meters')
 TrendBar2 = input.string(title = 'Trend Meter 2', defval = 'RSI 13: > or < 50', options = ['MACD Crossover - 12, 26, 9', 'MACD Crossover - Fast - 8, 21, 5', 'Mom Dad Cross (Top Dog Trading)', 'RSI Signal Line Cross - RSI 13, Sig 21', 'RSI 13: > or < 50', 'RSI 5: > or < 50', 'Trend Candles', 'N/A'], group = 'Trend Meters')
 TrendBar3 = input.string(title = 'Trend Meter 3', defval = 'RSI 5: > or < 50', options = ['MACD Crossover - 12, 26, 9', 'MACD Crossover - Fast - 8, 21, 5', 'Mom Dad Cross (Top Dog Trading)', 'RSI Signal Line Cross - RSI 13, Sig 21', 'RSI 13: > or < 50', 'RSI 5: > or < 50', 'Trend Candles', 'N/A'], group = 'Trend Meters')
+DataSource = input.source(defval = close, title="Prize data source", group="General configuration")
 
 //********************************************************************************************************************************************************************************************************************
 // On fire booleans
@@ -33,7 +34,7 @@ colorNeutral = color.rgb(158, 158, 158, 64) // Grey color for ?
 
 ////////////////Signals - Wave Trend/////////////////////////////////////////////////////////////////////////////////////////////////
 // Wave Trend - RSI
-RSIMC = ta.rsi(close, 14)
+RSIMC = ta.rsi(DataSource, 14)
 
 // Wave Trend
 ap = hlc3
@@ -54,7 +55,6 @@ osLevel = -50
 osLevel2 = -60
 
 // Wave Trend - Conditions
-
 WTCross = ta.cross(wt1, wt2)
 WTCrossUp = wt2 - wt1 <= 0
 WTCrossDown = wt2 - wt1 >= 0
@@ -81,27 +81,26 @@ MA4_Type = input.string(title = '', defval = 'SMA', options = ['EMA', 'SMA'], gr
 
 
 // MA Calculations
-Close = close
 
 MA1 = if MA1_Type == 'SMA'
-    ta.sma(Close, MA1_Length)
+    ta.sma(DataSource, MA1_Length)
 else
-    ta.ema(Close, MA1_Length)
+    ta.ema(DataSource, MA1_Length)
 
 MA2 = if MA2_Type == 'SMA'
-    ta.sma(Close, MA2_Length)
+    ta.sma(DataSource, MA2_Length)
 else
-    ta.ema(Close, MA2_Length)
+    ta.ema(DataSource, MA2_Length)
 
 MA3 = if MA3_Type == 'SMA'
-    ta.sma(Close, MA3_Length)
+    ta.sma(DataSource, MA3_Length)
 else
-    ta.ema(Close, MA3_Length)
+    ta.ema(DataSource, MA3_Length)
 
 MA4 = if MA4_Type == 'SMA'
-    ta.sma(Close, MA4_Length)
+    ta.sma(DataSource, MA4_Length)
 else
-    ta.ema(Close, MA4_Length)
+    ta.ema(DataSource, MA4_Length)
 
 // MA Crossover Condition
 MACrossover1 = MA1 > MA2 ? true : false
@@ -119,7 +118,7 @@ MACDfastMA = 12
 MACDslowMA = 26
 MACDsignalSmooth = 9
 
-MACDLine = ta.ema(close, MACDfastMA) - ta.ema(close, MACDslowMA)
+MACDLine = ta.ema(DataSource, MACDfastMA) - ta.ema(DataSource, MACDslowMA)
 SignalLine = ta.ema(MACDLine, MACDsignalSmooth)
 MACDHistogram = MACDLine - SignalLine
 
@@ -131,7 +130,7 @@ MACDLineOverZero = MACDLine > 0 ? true : false
 FastMACDfastMA = 8
 FastMACDslowMA = 21
 FastMACDsignalSmooth = 5
-FastMACDLine = ta.ema(close, FastMACDfastMA) - ta.ema(close, FastMACDslowMA)
+FastMACDLine = ta.ema(DataSource, FastMACDfastMA) - ta.ema(DataSource, FastMACDslowMA)
 FastSignalLine = ta.ema(FastMACDLine, FastMACDsignalSmooth)
 FastMACDHistogram = FastMACDLine - FastSignalLine
 
@@ -143,7 +142,7 @@ FastMACDLineOverZero = FastMACDLine > 0 ? true : false
 TopDog_Fast_MA = 5
 TopDog_Slow_MA = 20
 TopDog_Sig = 30
-TopDogMom = ta.ema(close, TopDog_Fast_MA) - ta.ema(close, TopDog_Slow_MA)
+TopDogMom = ta.ema(DataSource, TopDog_Fast_MA) - ta.ema(DataSource, TopDog_Slow_MA)
 TopDogDad = ta.ema(TopDogMom, TopDog_Sig)
 
 // Top Dog Dad - Background Color Change Condition
@@ -153,18 +152,18 @@ TopDogMomOverZero = TopDogMom > 0 ? true : false
 
 ////// Trend Barmeter Calculations //////
 // UCS_Trend / Trend Candles Trend Barmeter Calculations
-haclose = ohlc4
+haDataSource = ohlc4
 haopen = 0.0
-haopen := na(haopen[1]) ? (open + close) / 2 : (haopen[1] + haclose[1]) / 2
+haopen := na(haopen[1]) ? (open + DataSource) / 2 : (haopen[1] + haDataSource[1]) / 2
 
-ccolor = haclose - haopen > 0 ? true : false
+ccolor = haDataSource - haopen > 0 ? true : false
 
-inside6 = haopen <= math.max(haopen[6], haclose[6]) and haopen >= math.min(haopen[6], haclose[6]) and haclose <= math.max(haopen[6], haclose[6]) and haclose >= math.min(haopen[6], haclose[6]) ? true : false
-inside5 = haopen <= math.max(haopen[5], haclose[5]) and haopen >= math.min(haopen[5], haclose[5]) and haclose <= math.max(haopen[5], haclose[5]) and haclose >= math.min(haopen[5], haclose[5]) ? true : false
-inside4 = haopen <= math.max(haopen[4], haclose[4]) and haopen >= math.min(haopen[4], haclose[4]) and haclose <= math.max(haopen[4], haclose[4]) and haclose >= math.min(haopen[4], haclose[4]) ? true : false
-inside3 = haopen <= math.max(haopen[3], haclose[3]) and haopen >= math.min(haopen[3], haclose[3]) and haclose <= math.max(haopen[3], haclose[3]) and haclose >= math.min(haopen[3], haclose[3]) ? true : false
-inside2 = haopen <= math.max(haopen[2], haclose[2]) and haopen >= math.min(haopen[2], haclose[2]) and haclose <= math.max(haopen[2], haclose[2]) and haclose >= math.min(haopen[2], haclose[2]) ? true : false
-inside1 = haopen <= math.max(haopen[1], haclose[1]) and haopen >= math.min(haopen[1], haclose[1]) and haclose <= math.max(haopen[1], haclose[1]) and haclose >= math.min(haopen[1], haclose[1]) ? true : false
+inside6 = haopen <= math.max(haopen[6], haDataSource[6]) and haopen >= math.min(haopen[6], haDataSource[6]) and haDataSource <= math.max(haopen[6], haDataSource[6]) and haDataSource >= math.min(haopen[6], haDataSource[6]) ? true : false
+inside5 = haopen <= math.max(haopen[5], haDataSource[5]) and haopen >= math.min(haopen[5], haDataSource[5]) and haDataSource <= math.max(haopen[5], haDataSource[5]) and haDataSource >= math.min(haopen[5], haDataSource[5]) ? true : false
+inside4 = haopen <= math.max(haopen[4], haDataSource[4]) and haopen >= math.min(haopen[4], haDataSource[4]) and haDataSource <= math.max(haopen[4], haDataSource[4]) and haDataSource >= math.min(haopen[4], haDataSource[4]) ? true : false
+inside3 = haopen <= math.max(haopen[3], haDataSource[3]) and haopen >= math.min(haopen[3], haDataSource[3]) and haDataSource <= math.max(haopen[3], haDataSource[3]) and haDataSource >= math.min(haopen[3], haDataSource[3]) ? true : false
+inside2 = haopen <= math.max(haopen[2], haDataSource[2]) and haopen >= math.min(haopen[2], haDataSource[2]) and haDataSource <= math.max(haopen[2], haDataSource[2]) and haDataSource >= math.min(haopen[2], haDataSource[2]) ? true : false
+inside1 = haopen <= math.max(haopen[1], haDataSource[1]) and haopen >= math.min(haopen[1], haDataSource[1]) and haDataSource <= math.max(haopen[1], haDataSource[1]) and haDataSource >= math.min(haopen[1], haDataSource[1]) ? true : false
 
 colorvalue = inside6 ? ccolor[6] : inside5 ? ccolor[5] : inside4 ? ccolor[4] : inside3 ? ccolor[3] : inside2 ? ccolor[2] : inside1 ? ccolor[1] : ccolor
 
@@ -172,13 +171,13 @@ TrendBarTrend_Candle_Color = colorvalue ? colorLong : colorShort
 TrendBarTrend_Candle = colorvalue ? true : false
 
 // RSI 5 Trend Barmeter Calculations
-RSI5 = ta.rsi(close, 5)
+RSI5 = ta.rsi(DataSource, 5)
 RSI5Above50 = RSI5 > 50 ? true : false
 RSI5Color = RSI5Above50 ? colorLong : colorShort
 TrendBarRSI5Color = RSI5Above50 ? colorLong : colorShort
 
 // RSI 13 Trend Barmeter Calculations
-RSI13 = ta.rsi(close, 13)
+RSI13 = ta.rsi(DataSource, 13)
 
 // Linear Regression Calculation For RSI Signal Line
 SignalLineLength1 = 21
@@ -252,24 +251,20 @@ WTVOB = wt1 > 60
 WTVOS = wt1 < -60
 
 // Weekness / Pos/Neg Pressure
-
 YellowWavePointingUp = YellowWave > YellowWave[1]
 
-RSI14 = ta.rsi(close, 14)
+RSI14 = ta.rsi(DataSource, 14)
 RSI14OB = RSI14 > 70 ? true : false
 RSI14OS = RSI14 < 30 ? true : false
 
 OBIndicatorsYellowPointingDown = (RSI14OB or RSI14OB[1]) and WTVOB and not YellowWavePointingUp
-
 OSIndicatorsYellowPointingUp = (RSI14OS or RSI14OS[1]) and WTVOS and YellowWavePointingUp
 
 isPosNegPressureBullish = PosNegPressure and OSIndicatorsYellowPointingUp
 isPosNegPressureBearish = PosNegPressure and OBIndicatorsYellowPointingDown
+
 plot(isPosNegPressureBullish ? 138.5 : na, 'Wave Trend - Positive Pressure', color = colorLong, style = plot.style_circles, linewidth = 2)
 plot(isPosNegPressureBearish and OBIndicatorsYellowPointingDown ? 138.5 : na, 'Wave Trend - Negative Pressure', color = colorShort, style = plot.style_circles, linewidth = 2)
-
-alertcondition(OBIndicatorsYellowPointingDown or OSIndicatorsYellowPointingUp, title = ' -   Pos / Neg Pressure', message = 'Pos / Neg Pressure - Trend Meter')
-
 plot(TMSetups ? 134.5 : na, title = 'All 3 Trend Meters Now Align', style = plot.style_circles, color = MSBar2Color, linewidth = 3)
 plot(TMSetupsANDWT and (PositiveWaveTrendCross and TrendBars3Positive or NegativeWaveTrendCross and TrendBars3Negative) ? 134.5 : na, title = 'Wave Trend X & All 3 Trend Meters Now Align', style = plot.style_cross, color = MSBar2Color, linewidth = 4)
 
@@ -278,21 +273,14 @@ plot(128.5, title = 'Trend Meter 1', style = plot.style_circles, color = TrendBa
 plot(122.5, title = 'Trend Meter 2', style = plot.style_circles, color = TrendBar2Color, linewidth = 2)
 plot(116.5, title = 'Trend Meter 3', style = plot.style_circles, color = TrendBar3Color, linewidth = 2)
 
-
 plot(ShowTrendBar1 and ShowTrendBar2 ? 110 : na, title = 'Trend Bar 1 - Thin Line', style = plot.style_line, color = TrendBar4Color1, linewidth = 4)
 plot(ShowTrendBar1 and not ShowTrendBar2 ? 110 : na, title = 'Trend Bar 1 - Thick Line', style = plot.style_line, color = TrendBar4Color1, linewidth = 9)
 
 plot(ShowTrendBar2 and ShowTrendBar1 ? 104.5 : na, title = 'Trend Bar 2 - Thin Line', style = plot.style_line, color = TrendBar5Color1, linewidth = 6)
 plot(ShowTrendBar2 and not ShowTrendBar1 ? 110 : na, title = 'Trend Bar 2 - Thick Line', style = plot.style_line, color = TrendBar5Color1, linewidth = 9)
 
-
-
 // Background Highlights
-
 TrendBar3BarsSame = TrendBars3Positive ? colorLong : TrendBars3Negative ? colorShort : na
-
 TMa = hline(113.7, color = color.new(color.white, 100))
-
 TMb = hline(131.3, color = color.new(color.white, 100))
-
 fill(TMa, TMb, color = color.new(TrendBar3BarsSame, 91), title = 'Trend Meter Background Highlight - 3 Trend Meter Conditions Met')
