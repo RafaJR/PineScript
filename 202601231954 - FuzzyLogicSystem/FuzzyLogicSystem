@@ -28,7 +28,7 @@ TrendBar3 = input.string(title = 'Trend Meter 3', defval = 'RSI 5: > or < 50', o
 
 // colors
 colorLong = #95d697 // Green for bullish movements
-colorShort = color.rgb(235, 128, 92) // Red for bearish movements
+colorShort = #eb805c // Red for bearish movements
 colorNeutral = color.rgb(158, 158, 158, 64) // Grey color for ?
 
 ////////////////Signals - Wave Trend/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -296,92 +296,3 @@ TMa = hline(113.7, color = color.new(color.white, 100))
 TMb = hline(131.3, color = color.new(color.white, 100))
 
 fill(TMa, TMb, color = color.new(TrendBar3BarsSame, 91), title = 'Trend Meter Background Highlight - 3 Trend Meter Conditions Met')
-
-
-// Alerts & Conditions - MA Crossing & Background Color
-
-
-alertcondition(isBullishTrendBar, title = ' --  3 TMs Turn Green', message = 'All 3 Trend Meters Turn  Green - Trend Meter')
-alertcondition(isBearishTrendBar, title = ' --  3 TMs Turn Red', message = 'All 3 Trend Meters Turn  Red - Trend Meter')
-alertcondition(isBullishTrendBar or isBearishTrendBar, title = ' -- 3 TMs Change to Same Color', message = 'All 3 Trend Meters Change to Same Color - Trend Meter')
-
-
-alertcondition(PositiveWaveTrendCross and TrendBars3Positive, title = '--- 3 TMs Turn Green & WaveTrend X', message = 'Green - Wave Trend Signal - Aligns with 3 Trend Meters - Trend Meter')
-alertcondition(NegativeWaveTrendCross and TrendBars3Negative, title = '--- 3 TMs Turn Red & WaveTrend X', message = 'Red - Wave Trend Signal - Aligns with 3 Trend Meters - Trend Meter')
-alertcondition(PositiveWaveTrendCross and TrendBars3Positive or NegativeWaveTrendCross and TrendBars3Negative, title = '--- 3 TMs Change to Same Color & WT X', message = 'Red / Green - Wave Trend Signal - Aligns with 3 Trend Meters - Trend Meter')
-
-
-
-TrendMetersNoLongerAlign = (not TrendBars3Positive or not TrendBars3Negative) and TrendBars3Positive[1] or (not TrendBars3Positive or not TrendBars3Negative) and TrendBars3Negative[1]
-
-alertcondition(TrendMetersNoLongerAlign, title = '---- 3 Trend Meters No Longer Align', message = '3 Trend Meters No Longer Align - Trend Meter')
-
-
-RapidColorChangePositive = TrendBars3Positive and (TrendBars3Negative[1] or TrendBars3Negative[2])
-RapidColorChangeNegative = TrendBars3Negative and (TrendBars3Positive[1] or TrendBars3Positive[2])
-
-alertcondition(RapidColorChangePositive, title = 'All 3 TMs Rapid Change Red to Green', message = 'All 3 Trend Meters Rapid Change Red to Green - Trend Meter')
-alertcondition(RapidColorChangeNegative, title = 'All 3 TMs Rapid Change Green to Red', message = 'All 3 Trend Meters Rapid Change Green to Red - Trend Meter')
-alertcondition(RapidColorChangePositive or RapidColorChangeNegative, title = 'All 3 TMs Rapid Change to Same Color', message = 'All 3 Trend Meters Rapid Change to Same Color - Trend Meter')
-
-
-TB1MACrossUp = ta.crossover(MA1, MA2)
-TB1MACrossDown = ta.crossunder(MA1, MA2)
-
-
-alertcondition(TB1MACrossUp, title = 'TB 1 Turns Green', message = 'Trend Bar 1 - Turns Green - Trend Meter')
-alertcondition(TB1MACrossDown, title = 'TB 1 Turns Red', message = 'Trend Bar 1 - Turns Red - Trend Meter')
-alertcondition(TB1MACrossUp or TB1MACrossDown, title = 'TB 1 Color Change', message = 'Trend Bar 1 - Color Change - Trend Meter')
-
-
-TB2MACrossUp = ta.crossover(MA3, MA4)
-TB2MACrossDown = ta.crossunder(MA3, MA4)
-
-
-alertcondition(TB2MACrossUp, title = 'TB 2 Turns Green', message = 'Trend Bar 2 - Turns Green - Trend Meter')
-alertcondition(TB2MACrossDown, title = 'TB 2 Turns Red', message = 'Trend Bar 2 - Turns Red - Trend Meter')
-alertcondition(TB2MACrossUp or TB2MACrossDown, title = 'TB 2 Color Change', message = 'Trend Bar 2 - Color Change - Trend Meter')
-
-
-TB1Green = MA1 > MA2
-TB1Red = MA1 < MA2
-
-TB2Green = MA3 > MA4
-TB2Red = MA3 < MA4
-
-TB12Green = TB1Green and TB2Green and (TB1MACrossUp or TB2MACrossUp)
-TB12Red = TB1Red and TB2Red and (TB1MACrossDown or TB2MACrossDown)
-
-alertcondition(TB12Green, title = 'TBs 1+2 Turn Green', message = 'Trend Bars 1+2 - Turn Green - Trend Meter')
-alertcondition(TB12Red, title = 'TBs 1+2 Turn Red', message = 'Trend Bars 1+2 - Turn Red - Trend Meter')
-alertcondition(TB12Green or TB12Red, title = 'TBs 1+2 Change to Same Color', message = 'Trend Bars 1+2 - Change to Same Color - MAs Crossing - Trend Meter')
-
-
-alertcondition(TB12Green and TrendBars3Positive, title = 'TBs 1+2 Turn Green with 3 TMs', message = 'Trend Bars 1+2 - Turn Green with 3 TMs - Trend Meter')
-alertcondition(TB12Red and TrendBars3Negative, title = 'TBs 1+2 Turn Red with 3 TMs', message = 'Trend Bars 1+2 - Turn Red with 3 TMs- Trend Meter')
-alertcondition(TB12Green and TrendBars3Positive or TB12Red and TrendBars3Negative, title = 'TBs 1+2 Change to Same Color with 3 TMs', message = 'Trend Bars 1+2 - Change to Same Color with 3 TMs - Trend Meter')
-
-
-alertcondition(TB1Green and TrendBars3Positive, title = 'TB 1 Turns Green with 3 TMs', message = 'Trend Bar 1 - Turn Green with 3 TMs - Trend Meter')
-alertcondition(TB1Red and TrendBars3Negative, title = 'TB 1 Turns Red with 3 TMs', message = 'Trend Bar 1 - Turn Red with 3 TMs- Trend Meter')
-alertcondition(TB1Green and TrendBars3Positive or TB1Red and TrendBars3Negative, title = 'TB 1 Change to Same Color with 3 TMs', message = 'Trend Bar 1 - Change to Same Color with 3 TMs - Trend Meter')
-
-
-alertcondition(TB2Green and TrendBars3Positive, title = 'TB 2 Turns Green with 3 TMs', message = 'Trend Bar 2 - Turn Green with 3 TMs - Trend Meter')
-alertcondition(TB2Red and TrendBars3Negative, title = 'TB 2 Turns Red with 3 TMs', message = 'Trend Bar 2 - Turn Red with 3 TMs- Trend Meter')
-alertcondition(TB2Green and TrendBars3Positive or TB2Red and TrendBars3Negative, title = 'TB 2 Change to Same Color with 3 TMs', message = 'Trend Bar 2 - Change to Same Color with 3 TMs - Trend Meter')
-
-
-alertcondition(isBullishTrendBar and TB1Green, title = '3 TMs Turn Green with TB 1', message = 'All 3 Trend Meters Turn  Green with TB 1 - Trend Meter')
-alertcondition(isBearishTrendBar and TB1Red, title = '3 TMs Turn Red with TB 1', message = 'All 3 Trend Meters Turn  Red with TB 1 - Trend Meter')
-alertcondition(isBullishTrendBar and TB1Green or isBearishTrendBar and TB1Red, title = '3 TMs Change Color with TB 1', message = 'All 3 Trend Meters Change Color with TB 1 - Trend Meter')
-
-
-alertcondition(isBullishTrendBar and TB2Green, title = '3 TMs Turn Green with TB 2', message = 'All 3 Trend Meters Turn  Green with TB 2 - Trend Meter')
-alertcondition(isBearishTrendBar and TB2Red, title = '3 TMs Turn Red with TB 2', message = 'All 3 Trend Meters Turn  Red with TB 2 - Trend Meter')
-alertcondition(isBullishTrendBar and TB2Green or isBearishTrendBar and TB2Red, title = '3 TMs Change Color with TB 2', message = 'All 3 Trend Meters Change Color with TB 2 - Trend Meter')
-
-
-alertcondition(isBullishTrendBar and TB1Green and TB2Green, title = '3 TMs Turn Green with TBs 1+2', message = 'All 3 Trend Meters Turn  Green with Trend Bar 1+2 - Trend Meter')
-alertcondition(isBearishTrendBar and TB1Red and TB2Red, title = '3 TMs Turn Red with TBs 1+2', message = 'All 3 Trend Meters Turn  Red with Trend Bar 1+2 - Trend Meter')
-alertcondition(isBullishTrendBar and TB1Green and TB2Green or isBearishTrendBar and TB1Red and TB2Red, title = '3 TMs Change Color with TBs 1+2', message = 'All 3 Trend Meters Change Color with Trend Bar 1+2 - Trend Meter')
