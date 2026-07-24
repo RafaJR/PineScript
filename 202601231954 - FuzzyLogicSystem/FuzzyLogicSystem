@@ -38,7 +38,15 @@ DataSource = input.source(defval = close, title="Prize data source", group="Gene
 //    isBullishTrendBar
 //    isBearishTrendBar
 // First trend bar
-//  MACDHistogramCross
+//  OPT_MACD_CROSSOVER_12_26_9 	MACDHistogramCross
+//  OPT_MACD_CROSSOVER_FAST	    FastMACDHistogramCross
+//  OPT_MOM_DAD_CROSS	        TopDogMomOverDad
+//  OPT_DAD_DIRECTION	        TopDogDadDirection
+//  OPT_RSI_SIG_CROSS	        RSISigCross
+//  OPT_RSI_5_50	            RSI5Above50
+//  OPT_RSI_13_50	            RSI13Above50
+//  OPT_TREND_CANDLES	        colorvalue
+//  OPT_MA_CROSSOVER	        MACrossover1
 // First trend bar
 //    isBullishTrendBar4
 //    isBearishTrendBar4
@@ -279,6 +287,16 @@ OSIndicatorsYellowPointingUp = (RSI14OS or RSI14OS[1]) and WTVOS and YellowWaveP
 isPosNegPressureBullish = PosNegPressure and OSIndicatorsYellowPointingUp
 isPosNegPressureBearish = PosNegPressure and OBIndicatorsYellowPointingDown
 
+//******************************************************************************************************************************************************
+// Fuzzy logic calculations
+//******************************************************************************************************************************************************
+
+
+
+
+//******************************************************************************************************************************************************
+// Plotting
+//******************************************************************************************************************************************************
 plot(isPosNegPressureBullish ? 138.5 : na, 'Wave Trend - Positive Pressure', color = colorLong, style = plot.style_circles, linewidth = 2)
 plot(isPosNegPressureBearish and OBIndicatorsYellowPointingDown ? 138.5 : na, 'Wave Trend - Negative Pressure', color = colorShort, style = plot.style_circles, linewidth = 2)
 plot(TMSetups ? 134.5 : na, title = 'All 3 Trend Meters Now Align', style = plot.style_circles, color = MSBar2Color, linewidth = 3)
