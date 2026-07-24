@@ -30,13 +30,15 @@ TrendBar3 = input.string(title = 'Trend Meter 3', defval = OPT_RSI_5_50, options
 DataSource = input.source(defval = close, title="Prize data source", group="General configuration")
 
 //********************************************************************************************************************************************************************************************************************
-// On fire booleans
+// On fire booleans (true=green / false=red)
 // First line little balls
 //    isPosNegPressureBullish
 //    isPosNegPressureBearish
 // Second line icons (+, .)
 //    isBullishTrendBar
 //    isBearishTrendBar
+// First trend bar
+//  MACDHistogramCross
 // First trend bar
 //    isBullishTrendBar4
 //    isBearishTrendBar4
@@ -142,8 +144,8 @@ SignalLine = ta.ema(MACDLine, MACDsignalSmooth)
 MACDHistogram = MACDLine - SignalLine
 
 // MACD- Background Color Change Condition
-MACDHistogramCross = MACDHistogram > 0 ? true : false
-MACDLineOverZero = MACDLine > 0 ? true : false
+MACDHistogramCross = MACDHistogram > 0
+MACDLineOverZero = MACDLine > 0
 
 // Fast MACD Calculations
 FastMACDfastMA = 8
@@ -154,8 +156,8 @@ FastSignalLine = ta.ema(FastMACDLine, FastMACDsignalSmooth)
 FastMACDHistogram = FastMACDLine - FastSignalLine
 
 // Fast MACD- Background Color Change Condition
-FastMACDHistogramCross = FastMACDHistogram > 0 ? true : false
-FastMACDLineOverZero = FastMACDLine > 0 ? true : false
+FastMACDHistogramCross = FastMACDHistogram > 0
+FastMACDLineOverZero = FastMACDLine > 0
 
 // Top Dog Trading - Mom Dad Calculations
 TopDog_Fast_MA = 5
@@ -165,9 +167,9 @@ TopDogMom = ta.ema(DataSource, TopDog_Fast_MA) - ta.ema(DataSource, TopDog_Slow_
 TopDogDad = ta.ema(TopDogMom, TopDog_Sig)
 
 // Top Dog Dad - Background Color Change Condition
-TopDogDadDirection = TopDogDad > TopDogDad[1] ? true : false
-TopDogMomOverDad = TopDogMom > TopDogDad ? true : false
-TopDogMomOverZero = TopDogMom > 0 ? true : false
+TopDogDadDirection = TopDogDad > TopDogDad[1]
+TopDogMomOverDad = TopDogMom > TopDogDad
+TopDogMomOverZero = TopDogMom > 0
 
 ////// Trend Barmeter Calculations //////
 // UCS_Trend / Trend Candles Trend Barmeter Calculations
@@ -187,11 +189,11 @@ inside1 = haopen <= math.max(haopen[1], haDataSource[1]) and haopen >= math.min(
 colorvalue = inside6 ? ccolor[6] : inside5 ? ccolor[5] : inside4 ? ccolor[4] : inside3 ? ccolor[3] : inside2 ? ccolor[2] : inside1 ? ccolor[1] : ccolor
 
 TrendBarTrend_Candle_Color = colorvalue ? colorLong : colorShort
-TrendBarTrend_Candle = colorvalue ? true : false
+TrendBarTrend_Candle = colorvalue
 
 // RSI 5 Trend Barmeter Calculations
 RSI5 = ta.rsi(DataSource, 5)
-RSI5Above50 = RSI5 > 50 ? true : false
+RSI5Above50 = RSI5 > 50
 RSI5Color = RSI5Above50 ? colorLong : colorShort
 TrendBarRSI5Color = RSI5Above50 ? colorLong : colorShort
 
@@ -226,13 +228,11 @@ TrendBarMomOverDadColor = TopDogMomOverDad ? colorLong : colorShort
 TrendBarDadDirectionColor = TopDogDadDirection ? colorLong : colorShort
 
 TrendBar1Result = TrendBar1 == OPT_MA_CROSSOVER ? MACrossover1 : TrendBar1 == OPT_MACD_CROSSOVER_12_26_9 ? MACDHistogramCross : TrendBar1 == OPT_MACD_CROSSOVER_FAST ? FastMACDHistogramCross : TrendBar1 == OPT_MOM_DAD_CROSS ? TopDogMomOverDad : TrendBar1 == OPT_DAD_DIRECTION ? TopDogDadDirection : TrendBar1 == OPT_RSI_SIG_CROSS ? RSISigCross : TrendBar1 == OPT_RSI_5_50 ? RSI5Above50 : TrendBar1 == OPT_RSI_13_50 ? RSI13Above50 : TrendBar1 == OPT_TREND_CANDLES ? TrendBarTrend_Candle : false
-
 TrendBar2Result = TrendBar2 == OPT_MA_CROSSOVER ? MACrossover1 : TrendBar2 == OPT_MACD_CROSSOVER_12_26_9 ? MACDHistogramCross : TrendBar2 == OPT_MACD_CROSSOVER_FAST ? FastMACDHistogramCross : TrendBar2 == OPT_MOM_DAD_CROSS ? TopDogMomOverDad : TrendBar2 == OPT_DAD_DIRECTION ? TopDogDadDirection : TrendBar2 == OPT_RSI_SIG_CROSS ? RSISigCross : TrendBar2 == OPT_RSI_5_50 ? RSI5Above50 : TrendBar2 == OPT_RSI_13_50 ? RSI13Above50 : TrendBar2 == OPT_TREND_CANDLES ? TrendBarTrend_Candle : false
-
 TrendBar3Result = TrendBar3 == OPT_MA_CROSSOVER ? MACrossover1 : TrendBar3 == OPT_MACD_CROSSOVER_12_26_9 ? MACDHistogramCross : TrendBar3 == OPT_MACD_CROSSOVER_FAST ? FastMACDHistogramCross : TrendBar3 == OPT_MOM_DAD_CROSS ? TopDogMomOverDad : TrendBar3 == OPT_DAD_DIRECTION ? TopDogDadDirection : TrendBar3 == OPT_RSI_SIG_CROSS ? RSISigCross : TrendBar3 == OPT_RSI_5_50 ? RSI5Above50 : TrendBar3 == OPT_RSI_13_50 ? RSI13Above50 : TrendBar3 == OPT_TREND_CANDLES ? TrendBarTrend_Candle : false
 
-TrendBars3Positive = TrendBar1Result and TrendBar2Result and TrendBar3Result ? true : false
-TrendBars3Negative = not TrendBar1Result and not TrendBar2Result and not TrendBar3Result ? true : false
+TrendBars3Positive = TrendBar1Result and TrendBar2Result and TrendBar3Result
+TrendBars3Negative = not TrendBar1Result and not TrendBar2Result and not TrendBar3Result
 
 PositiveWaveTrendCross = WTCross and WTCrossUp
 NegativeWaveTrendCross = WTCross and WTCrossDown
