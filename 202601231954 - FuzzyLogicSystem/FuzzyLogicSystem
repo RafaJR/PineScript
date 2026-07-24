@@ -1,13 +1,32 @@
 //@version=6
 indicator(title = 'Trend Meter')
 
+// String constants for option values
+string OPT_MA_CROSSOVER = 'MA Crossover'
+string OPT_MACD_CROSSOVER = 'MACD Crossover'
+string OPT_MACD_CROSSOVER_12_26_9 = 'MACD Crossover - 12, 26, 9'
+string OPT_MACD_CROSSOVER_FAST = 'MACD Crossover - Fast - 8, 21, 5'
+string OPT_MOM_DAD_CROSS = 'Mom Dad Cross (Top Dog Trading)'
+string OPT_DAD_DIRECTION = 'DAD Direction (Top Dog Trading)'
+string OPT_RSI_SIG_CROSS = 'RSI Signal Line Cross - RSI 13, Sig 21'
+string OPT_RSI_5_50 = 'RSI 5: > or < 50'
+string OPT_RSI_13_50 = 'RSI 13: > or < 50'
+string OPT_TREND_CANDLES = 'Trend Candles'
+string OPT_NA = 'N/A'
+string OPT_MA_DIR_FAST_TB1 = 'MA Direction - Fast MA - TB1'
+string OPT_MA_DIR_SLOW_TB1 = 'MA Direction - Slow MA - TB1'
+string OPT_MA_DIR_FAST_TB2 = 'MA Direction - Fast MA - TB2'
+string OPT_MA_DIR_SLOW_TB2 = 'MA Direction - Slow MA - TB2'
+string OPT_EMA = 'EMA'
+string OPT_SMA = 'SMA'
+
 // Inputs / Menus
 PosNegPressure = input.bool(defval = true, title = 'Pos / Neg Pressure', tooltip = 'Positive Pressure   = RSI14 and Wave Trend Over Sold with WT Delta Pointing Up                                                               Negative Pressure = RSI14 and Wave Trend Over Bought with WT Delta Pointing Down', group = 'Signals')
 TMSetups = input.bool(defval = true, title = 'Trend Meter Signal', tooltip = 'All 3 Trend Meters Now Align', group = 'Signals')
 TMSetupsANDWT = input.bool(defval = true, title = 'Wave Trend Cross Aligns with Trend Meter Signal', group = 'Signals')
-TrendBar1 = input.string(title = 'Trend Meter 1', defval = 'MACD Crossover - Fast - 8, 21, 5', options = ['MACD Crossover - 12, 26, 9', 'MACD Crossover - Fast - 8, 21, 5', 'Mom Dad Cross (Top Dog Trading)', 'RSI Signal Line Cross - RSI 13, Sig 21', 'RSI 13: > or < 50', 'RSI 5: > or < 50', 'Trend Candles', 'N/A'], group = 'Trend Meters')
-TrendBar2 = input.string(title = 'Trend Meter 2', defval = 'RSI 13: > or < 50', options = ['MACD Crossover - 12, 26, 9', 'MACD Crossover - Fast - 8, 21, 5', 'Mom Dad Cross (Top Dog Trading)', 'RSI Signal Line Cross - RSI 13, Sig 21', 'RSI 13: > or < 50', 'RSI 5: > or < 50', 'Trend Candles', 'N/A'], group = 'Trend Meters')
-TrendBar3 = input.string(title = 'Trend Meter 3', defval = 'RSI 5: > or < 50', options = ['MACD Crossover - 12, 26, 9', 'MACD Crossover - Fast - 8, 21, 5', 'Mom Dad Cross (Top Dog Trading)', 'RSI Signal Line Cross - RSI 13, Sig 21', 'RSI 13: > or < 50', 'RSI 5: > or < 50', 'Trend Candles', 'N/A'], group = 'Trend Meters')
+TrendBar1 = input.string(title = 'Trend Meter 1', defval = OPT_MACD_CROSSOVER_FAST, options = [OPT_MACD_CROSSOVER_12_26_9, OPT_MACD_CROSSOVER_FAST, OPT_MOM_DAD_CROSS, OPT_RSI_SIG_CROSS, OPT_RSI_13_50, OPT_RSI_5_50, OPT_TREND_CANDLES, OPT_NA], group = 'Trend Meters')
+TrendBar2 = input.string(title = 'Trend Meter 2', defval = OPT_RSI_13_50, options = [OPT_MACD_CROSSOVER_12_26_9, OPT_MACD_CROSSOVER_FAST, OPT_MOM_DAD_CROSS, OPT_RSI_SIG_CROSS, OPT_RSI_13_50, OPT_RSI_5_50, OPT_TREND_CANDLES, OPT_NA], group = 'Trend Meters')
+TrendBar3 = input.string(title = 'Trend Meter 3', defval = OPT_RSI_5_50, options = [OPT_MACD_CROSSOVER_12_26_9, OPT_MACD_CROSSOVER_FAST, OPT_MOM_DAD_CROSS, OPT_RSI_SIG_CROSS, OPT_RSI_13_50, OPT_RSI_5_50, OPT_TREND_CANDLES, OPT_NA], group = 'Trend Meters')
 DataSource = input.source(defval = close, title="Prize data source", group="General configuration")
 
 //********************************************************************************************************************************************************************************************************************
@@ -64,40 +83,40 @@ WTOverBought = wt2 >= obLevel2
 // MA Inputs
 ShowTrendBar1 = input.bool(true, 'Trend Bar 1', group = 'Trend Bar 1', inline = 'Trend Bar 1')
 ShowTrendBar2 = input.bool(true, 'Trend Bar 2', group = 'Trend Bar 2', inline = 'Trend Bar 2')
-TrendBar4 = input.string(title = '', defval = 'MA Crossover', options = ['MA Crossover', 'MA Direction - Fast MA - TB1', 'MA Direction - Slow MA - TB1'], group = 'Trend Bar 1', inline = 'Trend Bar 1')
-TrendBar5 = input.string(title = '', defval = 'MA Crossover', options = ['MA Crossover', 'MA Direction - Fast MA - TB2', 'MA Direction - Slow MA - TB2'], group = 'Trend Bar 2', inline = 'Trend Bar 2')
+TrendBar4 = input.string(title = '', defval = OPT_MA_CROSSOVER, options = [OPT_MA_CROSSOVER, OPT_MA_DIR_FAST_TB1, OPT_MA_DIR_SLOW_TB1], group = 'Trend Bar 1', inline = 'Trend Bar 1')
+TrendBar5 = input.string(title = '', defval = OPT_MA_CROSSOVER, options = [OPT_MA_CROSSOVER, OPT_MA_DIR_FAST_TB2, OPT_MA_DIR_SLOW_TB2], group = 'Trend Bar 2', inline = 'Trend Bar 2')
 
 MA1_Length = input.int(5, title = 'Fast MA', minval = 1, group = 'Trend Bar 1', inline = 'TB1 Fast')
-MA1_Type = input.string(title = '', defval = 'EMA', options = ['EMA', 'SMA'], group = 'Trend Bar 1', inline = 'TB1 Fast')
+MA1_Type = input.string(title = '', defval = OPT_EMA, options = [OPT_EMA, OPT_SMA], group = 'Trend Bar 1', inline = 'TB1 Fast')
 
 MA2_Length = input.int(11, title = 'Slow MA', minval = 1, group = 'Trend Bar 1', inline = 'TB1 Slow')
-MA2_Type = input.string(title = '', defval = 'EMA', options = ['EMA', 'SMA'], group = 'Trend Bar 1', inline = 'TB1 Slow')
+MA2_Type = input.string(title = '', defval = OPT_EMA, options = [OPT_EMA, OPT_SMA], group = 'Trend Bar 1', inline = 'TB1 Slow')
 
 MA3_Length = input.int(13, title = 'Fast MA', minval = 1, group = 'Trend Bar 2', inline = 'TB2 Fast')
-MA3_Type = input.string(title = '', defval = 'EMA', options = ['EMA', 'SMA'], group = 'Trend Bar 2', inline = 'TB2 Fast')
+MA3_Type = input.string(title = '', defval = OPT_EMA, options = [OPT_EMA, OPT_SMA], group = 'Trend Bar 2', inline = 'TB2 Fast')
 
 MA4_Length = input.int(36, title = 'Slow MA', minval = 1, group = 'Trend Bar 2', inline = 'TB2 Slow')
-MA4_Type = input.string(title = '', defval = 'SMA', options = ['EMA', 'SMA'], group = 'Trend Bar 2', inline = 'TB2 Slow')
+MA4_Type = input.string(title = '', defval = OPT_SMA, options = [OPT_EMA, OPT_SMA], group = 'Trend Bar 2', inline = 'TB2 Slow')
 
 
 // MA Calculations
 
-MA1 = if MA1_Type == 'SMA'
+MA1 = if MA1_Type == OPT_SMA
     ta.sma(DataSource, MA1_Length)
 else
     ta.ema(DataSource, MA1_Length)
 
-MA2 = if MA2_Type == 'SMA'
+MA2 = if MA2_Type == OPT_SMA
     ta.sma(DataSource, MA2_Length)
 else
     ta.ema(DataSource, MA2_Length)
 
-MA3 = if MA3_Type == 'SMA'
+MA3 = if MA3_Type == OPT_SMA
     ta.sma(DataSource, MA3_Length)
 else
     ta.ema(DataSource, MA3_Length)
 
-MA4 = if MA4_Type == 'SMA'
+MA4 = if MA4_Type == OPT_SMA
     ta.sma(DataSource, MA4_Length)
 else
     ta.ema(DataSource, MA4_Length)
@@ -206,11 +225,11 @@ TrendBarMACrossColor = MACrossover1 ? colorLong : colorShort
 TrendBarMomOverDadColor = TopDogMomOverDad ? colorLong : colorShort
 TrendBarDadDirectionColor = TopDogDadDirection ? colorLong : colorShort
 
-TrendBar1Result = TrendBar1 == 'MA Crossover' ? MACrossover1 : TrendBar1 == 'MACD Crossover - 12, 26, 9' ? MACDHistogramCross : TrendBar1 == 'MACD Crossover - Fast - 8, 21, 5' ? FastMACDHistogramCross : TrendBar1 == 'Mom Dad Cross (Top Dog Trading)' ? TopDogMomOverDad : TrendBar1 == 'DAD Direction (Top Dog Trading)' ? TopDogDadDirection : TrendBar1 == 'RSI Signal Line Cross - RSI 13, Sig 21' ? RSISigCross : TrendBar1 == 'RSI 5: > or < 50' ? RSI5Above50 : TrendBar1 == 'RSI 13: > or < 50' ? RSI13Above50 : TrendBar1 == 'Trend Candles' ? TrendBarTrend_Candle : false
+TrendBar1Result = TrendBar1 == OPT_MA_CROSSOVER ? MACrossover1 : TrendBar1 == OPT_MACD_CROSSOVER_12_26_9 ? MACDHistogramCross : TrendBar1 == OPT_MACD_CROSSOVER_FAST ? FastMACDHistogramCross : TrendBar1 == OPT_MOM_DAD_CROSS ? TopDogMomOverDad : TrendBar1 == OPT_DAD_DIRECTION ? TopDogDadDirection : TrendBar1 == OPT_RSI_SIG_CROSS ? RSISigCross : TrendBar1 == OPT_RSI_5_50 ? RSI5Above50 : TrendBar1 == OPT_RSI_13_50 ? RSI13Above50 : TrendBar1 == OPT_TREND_CANDLES ? TrendBarTrend_Candle : false
 
-TrendBar2Result = TrendBar2 == 'MA Crossover' ? MACrossover1 : TrendBar2 == 'MACD Crossover - 12, 26, 9' ? MACDHistogramCross : TrendBar2 == 'MACD Crossover - Fast - 8, 21, 5' ? FastMACDHistogramCross : TrendBar2 == 'Mom Dad Cross (Top Dog Trading)' ? TopDogMomOverDad : TrendBar2 == 'DAD Direction (Top Dog Trading)' ? TopDogDadDirection : TrendBar2 == 'RSI Signal Line Cross - RSI 13, Sig 21' ? RSISigCross : TrendBar2 == 'RSI 5: > or < 50' ? RSI5Above50 : TrendBar2 == 'RSI 13: > or < 50' ? RSI13Above50 : TrendBar2 == 'Trend Candles' ? TrendBarTrend_Candle : false
+TrendBar2Result = TrendBar2 == OPT_MA_CROSSOVER ? MACrossover1 : TrendBar2 == OPT_MACD_CROSSOVER_12_26_9 ? MACDHistogramCross : TrendBar2 == OPT_MACD_CROSSOVER_FAST ? FastMACDHistogramCross : TrendBar2 == OPT_MOM_DAD_CROSS ? TopDogMomOverDad : TrendBar2 == OPT_DAD_DIRECTION ? TopDogDadDirection : TrendBar2 == OPT_RSI_SIG_CROSS ? RSISigCross : TrendBar2 == OPT_RSI_5_50 ? RSI5Above50 : TrendBar2 == OPT_RSI_13_50 ? RSI13Above50 : TrendBar2 == OPT_TREND_CANDLES ? TrendBarTrend_Candle : false
 
-TrendBar3Result = TrendBar3 == 'MA Crossover' ? MACrossover1 : TrendBar3 == 'MACD Crossover - 12, 26, 9' ? MACDHistogramCross : TrendBar3 == 'MACD Crossover - Fast - 8, 21, 5' ? FastMACDHistogramCross : TrendBar3 == 'Mom Dad Cross (Top Dog Trading)' ? TopDogMomOverDad : TrendBar3 == 'DAD Direction (Top Dog Trading)' ? TopDogDadDirection : TrendBar3 == 'RSI Signal Line Cross - RSI 13, Sig 21' ? RSISigCross : TrendBar3 == 'RSI 5: > or < 50' ? RSI5Above50 : TrendBar3 == 'RSI 13: > or < 50' ? RSI13Above50 : TrendBar3 == 'Trend Candles' ? TrendBarTrend_Candle : false
+TrendBar3Result = TrendBar3 == OPT_MA_CROSSOVER ? MACrossover1 : TrendBar3 == OPT_MACD_CROSSOVER_12_26_9 ? MACDHistogramCross : TrendBar3 == OPT_MACD_CROSSOVER_FAST ? FastMACDHistogramCross : TrendBar3 == OPT_MOM_DAD_CROSS ? TopDogMomOverDad : TrendBar3 == OPT_DAD_DIRECTION ? TopDogDadDirection : TrendBar3 == OPT_RSI_SIG_CROSS ? RSISigCross : TrendBar3 == OPT_RSI_5_50 ? RSI5Above50 : TrendBar3 == OPT_RSI_13_50 ? RSI13Above50 : TrendBar3 == OPT_TREND_CANDLES ? TrendBarTrend_Candle : false
 
 TrendBars3Positive = TrendBar1Result and TrendBar2Result and TrendBar3Result ? true : false
 TrendBars3Negative = not TrendBar1Result and not TrendBar2Result and not TrendBar3Result ? true : false
@@ -226,22 +245,22 @@ isBearishTrendBar = TrendBars3Negative and not TrendBars3Negative[1]
 MSBar2Color = isBullishTrendBar ? colorLong : isBearishTrendBar ? colorShort : colorNeutral
 
 // Trend Barmeter Color Assignments
-TrendBar1Color = TrendBar1 == 'N/A' ? colorNeutral : TrendBar1 == 'MACD Crossover - 12, 26, 9' ? TrendBarMACDColor : TrendBar1 == 'MACD Crossover - Fast - 8, 21, 5' ? TrendBarFastMACDColor : TrendBar1 == 'Mom Dad Cross (Top Dog Trading)' ? TrendBarMomOverDadColor : TrendBar1 == 'DAD Direction (Top Dog Trading)' ? TrendBarDadDirectionColor : TrendBar1 == 'RSI Signal Line Cross - RSI 13, Sig 21' ? TrendBarRSISigCrossColor : TrendBar1 == 'RSI 5: > or < 50' ? TrendBarRSI5Color : TrendBar1 == 'RSI 13: > or < 50' ? TrendBarRSI13Color : TrendBar1 == 'Trend Candles' ? TrendBarTrend_Candle_Color : TrendBar1 == 'MA Crossover' ? TrendBarMACrossColor : colorNeutral
-TrendBar2Color = TrendBar2 == 'N/A' ? colorNeutral : TrendBar2 == 'MACD Crossover - 12, 26, 9' ? TrendBarMACDColor : TrendBar2 == 'MACD Crossover - Fast - 8, 21, 5' ? TrendBarFastMACDColor : TrendBar2 == 'Mom Dad Cross (Top Dog Trading)' ? TrendBarMomOverDadColor : TrendBar2 == 'DAD Direction (Top Dog Trading)' ? TrendBarDadDirectionColor : TrendBar2 == 'RSI Signal Line Cross - RSI 13, Sig 21' ? TrendBarRSISigCrossColor : TrendBar2 == 'RSI 5: > or < 50' ? TrendBarRSI5Color : TrendBar2 == 'RSI 13: > or < 50' ? TrendBarRSI13Color : TrendBar2 == 'Trend Candles' ? TrendBarTrend_Candle_Color : TrendBar2 == 'MA Crossover' ? TrendBarMACrossColor : colorNeutral
-TrendBar3Color = TrendBar3 == 'N/A' ? colorNeutral : TrendBar3 == 'MACD Crossover - 12, 26, 9' ? TrendBarMACDColor : TrendBar3 == 'MACD Crossover - Fast - 8, 21, 5' ? TrendBarFastMACDColor : TrendBar3 == 'Mom Dad Cross (Top Dog Trading)' ? TrendBarMomOverDadColor : TrendBar3 == 'DAD Direction (Top Dog Trading)' ? TrendBarDadDirectionColor : TrendBar3 == 'RSI Signal Line Cross - RSI 13, Sig 21' ? TrendBarRSISigCrossColor : TrendBar3 == 'RSI 5: > or < 50' ? TrendBarRSI5Color : TrendBar3 == 'RSI 13: > or < 50' ? TrendBarRSI13Color : TrendBar3 == 'Trend Candles' ? TrendBarTrend_Candle_Color : TrendBar3 == 'MA Crossover' ? TrendBarMACrossColor : colorNeutral
+TrendBar1Color = TrendBar1 == OPT_NA ? colorNeutral : TrendBar1 == OPT_MACD_CROSSOVER_12_26_9 ? TrendBarMACDColor : TrendBar1 == OPT_MACD_CROSSOVER_FAST ? TrendBarFastMACDColor : TrendBar1 == OPT_MOM_DAD_CROSS ? TrendBarMomOverDadColor : TrendBar1 == OPT_DAD_DIRECTION ? TrendBarDadDirectionColor : TrendBar1 == OPT_RSI_SIG_CROSS ? TrendBarRSISigCrossColor : TrendBar1 == OPT_RSI_5_50 ? TrendBarRSI5Color : TrendBar1 == OPT_RSI_13_50 ? TrendBarRSI13Color : TrendBar1 == OPT_TREND_CANDLES ? TrendBarTrend_Candle_Color : TrendBar1 == OPT_MA_CROSSOVER ? TrendBarMACrossColor : colorNeutral
+TrendBar2Color = TrendBar2 == OPT_NA ? colorNeutral : TrendBar2 == OPT_MACD_CROSSOVER_12_26_9 ? TrendBarMACDColor : TrendBar2 == OPT_MACD_CROSSOVER_FAST ? TrendBarFastMACDColor : TrendBar2 == OPT_MOM_DAD_CROSS ? TrendBarMomOverDadColor : TrendBar2 == OPT_DAD_DIRECTION ? TrendBarDadDirectionColor : TrendBar2 == OPT_RSI_SIG_CROSS ? TrendBarRSISigCrossColor : TrendBar2 == OPT_RSI_5_50 ? TrendBarRSI5Color : TrendBar2 == OPT_RSI_13_50 ? TrendBarRSI13Color : TrendBar2 == OPT_TREND_CANDLES ? TrendBarTrend_Candle_Color : TrendBar2 == OPT_MA_CROSSOVER ? TrendBarMACrossColor : colorNeutral
+TrendBar3Color = TrendBar3 == OPT_NA ? colorNeutral : TrendBar3 == OPT_MACD_CROSSOVER_12_26_9 ? TrendBarMACDColor : TrendBar3 == OPT_MACD_CROSSOVER_FAST ? TrendBarFastMACDColor : TrendBar3 == OPT_MOM_DAD_CROSS ? TrendBarMomOverDadColor : TrendBar3 == OPT_DAD_DIRECTION ? TrendBarDadDirectionColor : TrendBar3 == OPT_RSI_SIG_CROSS ? TrendBarRSISigCrossColor : TrendBar3 == OPT_RSI_5_50 ? TrendBarRSI5Color : TrendBar3 == OPT_RSI_13_50 ? TrendBarRSI13Color : TrendBar3 == OPT_TREND_CANDLES ? TrendBarTrend_Candle_Color : TrendBar3 == OPT_MA_CROSSOVER ? TrendBarMACrossColor : colorNeutral
 
-CrossoverType2 = TrendBar4 == 'DAD Direction (Top Dog Trading)' ? TopDogDadDirection : TrendBar4 == 'MACD Crossover' ? MACDHistogramCross : TrendBar4 == 'MA Direction - Fast MA - TB1' ? MA1Direction : TrendBar4 == 'MA Direction - Slow MA - TB1' ? MA2Direction : MACrossover1
+CrossoverType2 = TrendBar4 == OPT_DAD_DIRECTION ? TopDogDadDirection : TrendBar4 == OPT_MACD_CROSSOVER ? MACDHistogramCross : TrendBar4 == OPT_MA_DIR_FAST_TB1 ? MA1Direction : TrendBar4 == OPT_MA_DIR_SLOW_TB1 ? MA2Direction : MACrossover1
 
-isBullishTrendBar4 = TrendBar4 != 'N/A' and CrossoverType2
-isBearishTrendBar4 = TrendBar4 != 'N/A' and not CrossoverType2
+isBullishTrendBar4 = TrendBar4 != OPT_NA and CrossoverType2
+isBearishTrendBar4 = TrendBar4 != OPT_NA and not CrossoverType2
 
 TrendBar4Color1 = isBullishTrendBar4 ? colorLong : isBearishTrendBar4 ? colorShort : colorNeutral
 
 
-CrossoverType3 = TrendBar5 == 'DAD Direction (Top Dog Trading)' ? TopDogDadDirection : TrendBar5 == 'MACD Crossover' ? MACDHistogramCross : TrendBar5 == 'MA Direction - Fast MA - TB2' ? MA3Direction : TrendBar5 == 'MA Direction - Slow MA - TB2' ? MA4Direction : MACrossover2
+CrossoverType3 = TrendBar5 == OPT_DAD_DIRECTION ? TopDogDadDirection : TrendBar5 == OPT_MACD_CROSSOVER ? MACDHistogramCross : TrendBar5 == OPT_MA_DIR_FAST_TB2 ? MA3Direction : TrendBar5 == OPT_MA_DIR_SLOW_TB2 ? MA4Direction : MACrossover2
 
-isBullishTrendBar5 = TrendBar5 != 'N/A' and CrossoverType3
-isBearishTrendBar5 = TrendBar5 != 'N/A' and not CrossoverType3
+isBullishTrendBar5 = TrendBar5 != OPT_NA and CrossoverType3
+isBearishTrendBar5 = TrendBar5 != OPT_NA and not CrossoverType3
 TrendBar5Color1 = isBullishTrendBar5 ? colorLong : isBearishTrendBar5 ? colorShort : colorNeutral
 
 WTVOB = wt1 > 60
