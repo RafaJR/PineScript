@@ -30,7 +30,7 @@ DataSource = input.source(defval = close, title="Prize data source", group="Gene
 // colors
 colorLong = #95d697 // Green for bullish movements
 colorShort = #eb805c // Red for bearish movements
-colorNeutral = color.rgb(158, 158, 158, 64) // Grey color for ?
+colorNeutral = #9e9e9e5c // Grey color for ?
 
 ////////////////Signals - Wave Trend/////////////////////////////////////////////////////////////////////////////////////////////////
 // Wave Trend - RSI
@@ -227,11 +227,8 @@ MSBar2Color = isBullishTrendBar ? colorLong : isBearishTrendBar ? colorShort : c
 
 // Trend Barmeter Color Assignments
 TrendBar1Color = TrendBar1 == 'N/A' ? colorNeutral : TrendBar1 == 'MACD Crossover - 12, 26, 9' ? TrendBarMACDColor : TrendBar1 == 'MACD Crossover - Fast - 8, 21, 5' ? TrendBarFastMACDColor : TrendBar1 == 'Mom Dad Cross (Top Dog Trading)' ? TrendBarMomOverDadColor : TrendBar1 == 'DAD Direction (Top Dog Trading)' ? TrendBarDadDirectionColor : TrendBar1 == 'RSI Signal Line Cross - RSI 13, Sig 21' ? TrendBarRSISigCrossColor : TrendBar1 == 'RSI 5: > or < 50' ? TrendBarRSI5Color : TrendBar1 == 'RSI 13: > or < 50' ? TrendBarRSI13Color : TrendBar1 == 'Trend Candles' ? TrendBarTrend_Candle_Color : TrendBar1 == 'MA Crossover' ? TrendBarMACrossColor : colorNeutral
-
-TrendBar2Color = TrendBar2 == 'N/A' ? na : TrendBar2 == 'MACD Crossover - 12, 26, 9' ? TrendBarMACDColor : TrendBar2 == 'MACD Crossover - Fast - 8, 21, 5' ? TrendBarFastMACDColor : TrendBar2 == 'Mom Dad Cross (Top Dog Trading)' ? TrendBarMomOverDadColor : TrendBar2 == 'DAD Direction (Top Dog Trading)' ? TrendBarDadDirectionColor : TrendBar2 == 'RSI Signal Line Cross - RSI 13, Sig 21' ? TrendBarRSISigCrossColor : TrendBar2 == 'RSI 5: > or < 50' ? TrendBarRSI5Color : TrendBar2 == 'RSI 13: > or < 50' ? TrendBarRSI13Color : TrendBar2 == 'Trend Candles' ? TrendBarTrend_Candle_Color : TrendBar2 == 'MA Crossover' ? TrendBarMACrossColor : na
-
-TrendBar3Color = TrendBar3 == 'N/A' ? na : TrendBar3 == 'MACD Crossover - 12, 26, 9' ? TrendBarMACDColor : TrendBar3 == 'MACD Crossover - Fast - 8, 21, 5' ? TrendBarFastMACDColor : TrendBar3 == 'Mom Dad Cross (Top Dog Trading)' ? TrendBarMomOverDadColor : TrendBar3 == 'DAD Direction (Top Dog Trading)' ? TrendBarDadDirectionColor : TrendBar3 == 'RSI Signal Line Cross - RSI 13, Sig 21' ? TrendBarRSISigCrossColor : TrendBar3 == 'RSI 5: > or < 50' ? TrendBarRSI5Color : TrendBar3 == 'RSI 13: > or < 50' ? TrendBarRSI13Color : TrendBar3 == 'Trend Candles' ? TrendBarTrend_Candle_Color : TrendBar3 == 'MA Crossover' ? TrendBarMACrossColor : na
-
+TrendBar2Color = TrendBar2 == 'N/A' ? colorNeutral : TrendBar2 == 'MACD Crossover - 12, 26, 9' ? TrendBarMACDColor : TrendBar2 == 'MACD Crossover - Fast - 8, 21, 5' ? TrendBarFastMACDColor : TrendBar2 == 'Mom Dad Cross (Top Dog Trading)' ? TrendBarMomOverDadColor : TrendBar2 == 'DAD Direction (Top Dog Trading)' ? TrendBarDadDirectionColor : TrendBar2 == 'RSI Signal Line Cross - RSI 13, Sig 21' ? TrendBarRSISigCrossColor : TrendBar2 == 'RSI 5: > or < 50' ? TrendBarRSI5Color : TrendBar2 == 'RSI 13: > or < 50' ? TrendBarRSI13Color : TrendBar2 == 'Trend Candles' ? TrendBarTrend_Candle_Color : TrendBar2 == 'MA Crossover' ? TrendBarMACrossColor : colorNeutral
+TrendBar3Color = TrendBar3 == 'N/A' ? colorNeutral : TrendBar3 == 'MACD Crossover - 12, 26, 9' ? TrendBarMACDColor : TrendBar3 == 'MACD Crossover - Fast - 8, 21, 5' ? TrendBarFastMACDColor : TrendBar3 == 'Mom Dad Cross (Top Dog Trading)' ? TrendBarMomOverDadColor : TrendBar3 == 'DAD Direction (Top Dog Trading)' ? TrendBarDadDirectionColor : TrendBar3 == 'RSI Signal Line Cross - RSI 13, Sig 21' ? TrendBarRSISigCrossColor : TrendBar3 == 'RSI 5: > or < 50' ? TrendBarRSI5Color : TrendBar3 == 'RSI 13: > or < 50' ? TrendBarRSI13Color : TrendBar3 == 'Trend Candles' ? TrendBarTrend_Candle_Color : TrendBar3 == 'MA Crossover' ? TrendBarMACrossColor : colorNeutral
 
 CrossoverType2 = TrendBar4 == 'DAD Direction (Top Dog Trading)' ? TopDogDadDirection : TrendBar4 == 'MACD Crossover' ? MACDHistogramCross : TrendBar4 == 'MA Direction - Fast MA - TB1' ? MA1Direction : TrendBar4 == 'MA Direction - Slow MA - TB1' ? MA2Direction : MACrossover1
 
