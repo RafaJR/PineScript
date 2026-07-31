@@ -1,0 +1,21 @@
+//@version=6
+indicator('Volatility Oscillator', overlay = false, timeframe = '')
+
+// Configuration inputs
+length = input.int(100, title = 'Length', minval = 1)
+
+// Colors
+colorLong = #95d697
+colorShort = #eb805c
+colorVolatility = #6db1cc5c
+
+// Volatility Oscillator calculations
+spike = close - open
+upperLine = ta.stdev(spike, length)
+lowerLine = -upperLine
+
+// Plotting
+plot(spike, title = 'Volatility Spike', color = colorVolatility, linewidth = 2, force_overlay = false)
+plot(upperLine, title = 'Volatility Upper Line', color = colorLong, linewidth = 1, force_overlay = false)
+plot(lowerLine, title = 'Volatility Lower Line', color = colorShort, linewidth = 1, force_overlay = false)
+plot(0, title = 'Volatility Zero Line', color = color.white, force_overlay = false)
