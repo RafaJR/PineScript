@@ -35,6 +35,9 @@ maType = input.string("VWMA", "Basis MA Type", options = ["SMA", "EMA", "SMMA (R
 fastEmaPeriod = input.int(50, title="Fast EMA", minval=1, step=10, inline="Fast EMA", group="EMAs")
 slowEmaPeriod = input.int(200, title="Slow EMA", minval=1, step=10, inline="Slow EMA", group="EMAs")
 
+// Configuration inputs
+volLenght = input.int(defval = 100, title = 'Length', minval = 1, step = 1, group = 'Volatility')
+
 // Fuzzy logic Inputs
 isPosNegPressureBullishWeight = input.float(title = 'isPosNegPressureBullishWeight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 isPosNegPressureBearishWeight = input.float(title = 'isPosNegPressureBearish', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
@@ -55,6 +58,8 @@ isBullishTrendBar5Weight = input.float(title = 'isBullishTrendBar5Weight', defva
 isBearishTrendBar5Weight = input.float(title = 'isBearishTrendBar5Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 isMaBullishWeight = input.float(title = 'isMaBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 isMaBearishWeight = input.float(title = 'isMaBearishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+isVolatilityBullishWeight = input.float(title = 'isVolatilityBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+isVolatilityBearishWeight = input.float(title = 'isVolatilityBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 
 bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 80, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -80, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
@@ -90,6 +95,7 @@ bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -80,
 colorLong = #95d697 // Green for bullish movements
 colorShort = #eb805c // Red for bearish movements
 colorNeutral = #9e9e9e5c // Grey color for ?
+colorVolatility = #6db1cc5c // Blue for volatility movements
 
 //******************************************************************************************************************************************************
 // Main indicators calculations
@@ -335,6 +341,14 @@ maSlowSource = maSource(DataSource, slowEmaPeriod, maType)
 isMaBearish = maSlowSource > maFastSource
 isMaBullish = maSlowSource < maFastSource
 
+// Volatility Oscillator calculations
+spike = close - open
+upperLine = ta.stdev(spike, volLenght)
+lowerLine = -upperLine
+
+isVolatilityBullish = spike > upperLine
+isVolatilityBearish = spike < lowerLine
+
 //******************************************************************************************************************************************************
 // Fuzzy logic calculations
 //******************************************************************************************************************************************************
@@ -359,9 +373,11 @@ isBullishTrendBar5Weight := totalWeight > 0 ? isBullishTrendBar5Weight / totalWe
 isBearishTrendBar5Weight := totalWeight > 0 ? isBearishTrendBar5Weight / totalWeight * 100 : 0
 isMaBullishWeight := totalWeight > 0 ? isMaBullishWeight / totalWeight * 100 : 0
 isMaBearishWeight := totalWeight > 0 ? isMaBearishWeight / totalWeight * 100 : 0
+isVolatilityBullishWeight := totalWeight > 0 ? isVolatilityBullishWeight / totalWeight * 100 : 0
+isVolatilityBearishWeight := totalWeight > 0 ? isVolatilityBearishWeight / totalWeight * 100 : 0
 
-bullishWeightPercentage = (isPosNegPressureBullish ? isPosNegPressureBullishWeight : 0) + (isPosNegPressureBearish ? isPosNegPressureBearishWeight : 0) + (isBullishTrendBar ? isBullishTrendBarWeight : 0) + (isBearishTrendBar ? isBearishTrendBarWeight : 0) + (MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (RSISigCross ? RSISigCrossWeight : 0) + (RSI5Above50 ? RSI5Above50Weight : 0) + (RSI13Above50 ? RSI13Above50Weight : 0) + (MACrossover1 ? MACrossover1Weight : 0) + (isBullishTrendBar4 ? isBullishTrendBar4Weight : 0) + (isBearishTrendBar4 ? isBearishTrendBar4Weight : 0) + (isBullishTrendBar5 ? isBullishTrendBar5Weight : 0) + (isBearishTrendBar5 ? isBearishTrendBar5Weight : 0) + (isMaBullish ? isMaBullishWeight : 0)
-bearishWeightPercentage = (not isPosNegPressureBullish ? isPosNegPressureBullishWeight : 0) + (not isPosNegPressureBearish ? isPosNegPressureBearishWeight : 0) + (not isBullishTrendBar ? isBullishTrendBarWeight : 0) + (not isBearishTrendBar ? isBearishTrendBarWeight : 0) + (not MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (not FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (not TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (not TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (not RSISigCross ? RSISigCrossWeight : 0) + (not RSI5Above50 ? RSI5Above50Weight : 0) + (not RSI13Above50 ? RSI13Above50Weight : 0) + (not MACrossover1 ? MACrossover1Weight : 0) + (not isBullishTrendBar4 ? isBullishTrendBar4Weight : 0) + (not isBearishTrendBar4 ? isBearishTrendBar4Weight : 0) + (not isBullishTrendBar5 ? isBullishTrendBar5Weight : 0) + (not isBearishTrendBar5 ? isBearishTrendBar5Weight : 0) + (isMaBearish ? isMaBearishWeight : 0)
+bullishWeightPercentage = (isPosNegPressureBullish ? isPosNegPressureBullishWeight : 0) + (isPosNegPressureBearish ? isPosNegPressureBearishWeight : 0) + (isBullishTrendBar ? isBullishTrendBarWeight : 0) + (isBearishTrendBar ? isBearishTrendBarWeight : 0) + (MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (RSISigCross ? RSISigCrossWeight : 0) + (RSI5Above50 ? RSI5Above50Weight : 0) + (RSI13Above50 ? RSI13Above50Weight : 0) + (MACrossover1 ? MACrossover1Weight : 0) + (isBullishTrendBar4 ? isBullishTrendBar4Weight : 0) + (isBearishTrendBar4 ? isBearishTrendBar4Weight : 0) + (isBullishTrendBar5 ? isBullishTrendBar5Weight : 0) + (isBearishTrendBar5 ? isBearishTrendBar5Weight : 0) + (isMaBullish ? isMaBullishWeight : 0) + (isVolatilityBullish ? isVolatilityBullishWeight : 0)
+bearishWeightPercentage = (not isPosNegPressureBullish ? isPosNegPressureBullishWeight : 0) + (not isPosNegPressureBearish ? isPosNegPressureBearishWeight : 0) + (not isBullishTrendBar ? isBullishTrendBarWeight : 0) + (not isBearishTrendBar ? isBearishTrendBarWeight : 0) + (not MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (not FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (not TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (not TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (not RSISigCross ? RSISigCrossWeight : 0) + (not RSI5Above50 ? RSI5Above50Weight : 0) + (not RSI13Above50 ? RSI13Above50Weight : 0) + (not MACrossover1 ? MACrossover1Weight : 0) + (not isBullishTrendBar4 ? isBullishTrendBar4Weight : 0) + (not isBearishTrendBar4 ? isBearishTrendBar4Weight : 0) + (not isBullishTrendBar5 ? isBullishTrendBar5Weight : 0) + (not isBearishTrendBar5 ? isBearishTrendBar5Weight : 0) + (isMaBearish ? isMaBearishWeight : 0) + (isVolatilityBearish ? isVolatilityBearishWeight : 0)
 
 ponderatedWeightPercentage = bullishWeightPercentage - bearishWeightPercentage
 
