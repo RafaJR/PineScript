@@ -20,7 +20,9 @@ string OPT_MA_DIR_SLOW_TB2 = 'MA Direction - Slow MA - TB2'
 string OPT_EMA = 'EMA'
 string OPT_SMA = 'SMA'
 
-// Inputs / Menus
+//******************************************************************************************************************************************************
+// Configuration inputs
+//******************************************************************************************************************************************************
 PosNegPressure = input.bool(defval = true, title = 'Pos / Neg Pressure', tooltip = 'Positive Pressure   = RSI14 and Wave Trend Over Sold with WT Delta Pointing Up                                                               Negative Pressure = RSI14 and Wave Trend Over Bought with WT Delta Pointing Down', group = 'Signals')
 TMSetups = input.bool(defval = true, title = 'Trend Meter Signal', tooltip = 'All 3 Trend Meters Now Align', group = 'Signals')
 TMSetupsANDWT = input.bool(defval = true, title = 'Wave Trend Cross Aligns with Trend Meter Signal', group = 'Signals')
@@ -28,12 +30,16 @@ TrendBar1 = input.string(title = 'Trend Meter 1', defval = OPT_MACD_CROSSOVER_FA
 TrendBar2 = input.string(title = 'Trend Meter 2', defval = OPT_RSI_13_50, options = [OPT_MACD_CROSSOVER_12_26_9, OPT_MACD_CROSSOVER_FAST, OPT_MOM_DAD_CROSS, OPT_RSI_SIG_CROSS, OPT_RSI_13_50, OPT_RSI_5_50, OPT_TREND_CANDLES, OPT_NA], group = 'Trend Meters')
 TrendBar3 = input.string(title = 'Trend Meter 3', defval = OPT_RSI_5_50, options = [OPT_MACD_CROSSOVER_12_26_9, OPT_MACD_CROSSOVER_FAST, OPT_MOM_DAD_CROSS, OPT_RSI_SIG_CROSS, OPT_RSI_13_50, OPT_RSI_5_50, OPT_TREND_CANDLES, OPT_NA], group = 'Trend Meters')
 DataSource = input.source(defval = close, title="Prize data source", group="General configuration")
+// Averange calculation parameters
+maType = input.string("VWMA", "Basis MA Type", options = ["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="Averange")
+fastEmaPeriod = input.int(50, title="Fast EMA", minval=1, step=10, inline="Fast EMA", group="EMAs")
+slowEmaPeriod = input.int(200, title="Slow EMA", minval=1, step=10, inline="Slow EMA", group="EMAs")
 
 // Fuzzy logic Inputs
-isPosNegPressureBullishWeight = input.float(title = 'isPosNegPressureBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-isPosNegPressureBearishWeight = input.float(title = 'isPosNegPressureBearish', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-isBullishTrendBarWeight = input.float(title = 'isBullishTrendBarWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-isBearishTrendBarWeight = input.float(title = 'isBearishTrendBarWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+isPosNegPressureBullishWeight = input.float(title = 'isPosNegPressureBullishWeight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+isPosNegPressureBearishWeight = input.float(title = 'isPosNegPressureBearish', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+isBullishTrendBarWeight = input.float(title = 'isBullishTrendBarWeight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+isBearishTrendBarWeight = input.float(title = 'isBearishTrendBarWeight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 MACDHistogramCrossWeight = input.float(title = 'MACDHistogramCrossWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 FastMACDHistogramCrossWeight = input.float(title = 'FastMACDHistogramCrossWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 TopDogMomOverDadWeight = input.float(title = 'TopDogMomOverDadWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
@@ -47,6 +53,8 @@ isBullishTrendBar4Weight = input.float(title = 'isBullishTrendBar4Weight', defva
 isBearishTrendBar4Weight = input.float(title = 'isBearishTrendBar4Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 isBullishTrendBar5Weight = input.float(title = 'isBullishTrendBar5Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 isBearishTrendBar5Weight = input.float(title = 'isBearishTrendBar5Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+isMaBullishWeight = input.float(title = 'isMaBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+isMaBearishWeight = input.float(title = 'isMaBearishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 
 bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 80, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -80, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
@@ -309,6 +317,22 @@ OSIndicatorsYellowPointingUp = (RSI14OS or RSI14OS[1]) and WTVOS and YellowWaveP
 isPosNegPressureBullish = PosNegPressure and OSIndicatorsYellowPointingUp
 isPosNegPressureBearish = PosNegPressure and OBIndicatorsYellowPointingDown
 
+// MAs calculations
+// Setting de MAS type
+maSource(float source, int length, simple string maType) =>
+    switch maType
+        "SMA" => ta.sma(DataSource, length)
+        "EMA" => ta.ema(DataSource, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+
+maFastSource = maSource(DataSource, fastEmaPeriod, maType)
+maSlowSource = maSource(DataSource, slowEmaPeriod, maType)
+
+isMaBearish = maSlowSource > maFastSource
+isMaBullish = maSlowSource < maFastSource
+
 //******************************************************************************************************************************************************
 // Fuzzy logic calculations
 //******************************************************************************************************************************************************
@@ -331,43 +355,54 @@ isBullishTrendBar4Weight := totalWeight > 0 ? isBullishTrendBar4Weight / totalWe
 isBearishTrendBar4Weight := totalWeight > 0 ? isBearishTrendBar4Weight / totalWeight * 100 : 0
 isBullishTrendBar5Weight := totalWeight > 0 ? isBullishTrendBar5Weight / totalWeight * 100 : 0
 isBearishTrendBar5Weight := totalWeight > 0 ? isBearishTrendBar5Weight / totalWeight * 100 : 0
+isMaBullishWeight := totalWeight > 0 ? isMaBullishWeight / totalWeight * 100 : 0
+isMaBearishWeight := totalWeight > 0 ? isMaBearishWeight / totalWeight * 100 : 0
 
-bullishWeightPercentage = (isPosNegPressureBullish ? isPosNegPressureBullishWeight : 0) + (isPosNegPressureBearish ? isPosNegPressureBearishWeight : 0) + (isBullishTrendBar ? isBullishTrendBarWeight : 0) + (isBearishTrendBar ? isBearishTrendBarWeight : 0) + (MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (RSISigCross ? RSISigCrossWeight : 0) + (RSI5Above50 ? RSI5Above50Weight : 0) + (RSI13Above50 ? RSI13Above50Weight : 0) + (MACrossover1 ? MACrossover1Weight : 0) + (isBullishTrendBar4 ? isBullishTrendBar4Weight : 0) + (isBearishTrendBar4 ? isBearishTrendBar4Weight : 0) + (isBullishTrendBar5 ? isBullishTrendBar5Weight : 0) + (isBearishTrendBar5 ? isBearishTrendBar5Weight : 0)
-bearishWeightPercentage = (not isPosNegPressureBullish ? isPosNegPressureBullishWeight : 0) + (not isPosNegPressureBearish ? isPosNegPressureBearishWeight : 0) + (not isBullishTrendBar ? isBullishTrendBarWeight : 0) + (not isBearishTrendBar ? isBearishTrendBarWeight : 0) + (not MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (not FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (not TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (not TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (not RSISigCross ? RSISigCrossWeight : 0) + (not RSI5Above50 ? RSI5Above50Weight : 0) + (not RSI13Above50 ? RSI13Above50Weight : 0) + (not MACrossover1 ? MACrossover1Weight : 0) + (not isBullishTrendBar4 ? isBullishTrendBar4Weight : 0) + (not isBearishTrendBar4 ? isBearishTrendBar4Weight : 0) + (not isBullishTrendBar5 ? isBullishTrendBar5Weight : 0) + (not isBearishTrendBar5 ? isBearishTrendBar5Weight : 0)
+bullishWeightPercentage = (isPosNegPressureBullish ? isPosNegPressureBullishWeight : 0) + (isPosNegPressureBearish ? isPosNegPressureBearishWeight : 0) + (isBullishTrendBar ? isBullishTrendBarWeight : 0) + (isBearishTrendBar ? isBearishTrendBarWeight : 0) + (MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (RSISigCross ? RSISigCrossWeight : 0) + (RSI5Above50 ? RSI5Above50Weight : 0) + (RSI13Above50 ? RSI13Above50Weight : 0) + (MACrossover1 ? MACrossover1Weight : 0) + (isBullishTrendBar4 ? isBullishTrendBar4Weight : 0) + (isBearishTrendBar4 ? isBearishTrendBar4Weight : 0) + (isBullishTrendBar5 ? isBullishTrendBar5Weight : 0) + (isBearishTrendBar5 ? isBearishTrendBar5Weight : 0) + (isMaBullish ? isMaBullishWeight : 0)
+bearishWeightPercentage = (not isPosNegPressureBullish ? isPosNegPressureBullishWeight : 0) + (not isPosNegPressureBearish ? isPosNegPressureBearishWeight : 0) + (not isBullishTrendBar ? isBullishTrendBarWeight : 0) + (not isBearishTrendBar ? isBearishTrendBarWeight : 0) + (not MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (not FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (not TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (not TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (not RSISigCross ? RSISigCrossWeight : 0) + (not RSI5Above50 ? RSI5Above50Weight : 0) + (not RSI13Above50 ? RSI13Above50Weight : 0) + (not MACrossover1 ? MACrossover1Weight : 0) + (not isBullishTrendBar4 ? isBullishTrendBar4Weight : 0) + (not isBearishTrendBar4 ? isBearishTrendBar4Weight : 0) + (not isBullishTrendBar5 ? isBullishTrendBar5Weight : 0) + (not isBearishTrendBar5 ? isBearishTrendBar5Weight : 0) + (isMaBearish ? isMaBearishWeight : 0)
 
 ponderatedWeightPercentage = bullishWeightPercentage - bearishWeightPercentage
 
 //******************************************************************************************************************************************************
 // Plotting
 //******************************************************************************************************************************************************
-plot(isPosNegPressureBullish ? 138.5 : na, 'Wave Trend - Positive Pressure', color = colorLong, style = plot.style_circles, linewidth = 2)
-plot(isPosNegPressureBearish and OBIndicatorsYellowPointingDown ? 138.5 : na, 'Wave Trend - Negative Pressure', color = colorShort, style = plot.style_circles, linewidth = 2)
-plot(TMSetups ? 134.5 : na, title = 'All 3 Trend Meters Now Align', style = plot.style_circles, color = MSBar2Color, linewidth = 3)
-plot(TMSetupsANDWT and (PositiveWaveTrendCross and TrendBars3Positive or NegativeWaveTrendCross and TrendBars3Negative) ? 134.5 : na, title = 'Wave Trend X & All 3 Trend Meters Now Align', style = plot.style_cross, color = MSBar2Color, linewidth = 4)
+// EMAs Plotting
+maSourceSlowColor = maSlowSource < DataSource ? colorLong : colorShort
+maSourceFastColor = maFastSource < DataSource ? colorLong : colorShort
+maSourceSlowPlot = plot(series=maSlowSource, title="maSource", color=maSourceSlowColor, linewidth = 2, force_overlay = true)
+maSourceFastPlot = plot(series=maFastSource, title="maSource", color=maSourceFastColor, linewidth = 1, force_overlay = true)
+
+fillColor = isMaBearish ? color.new(colorShort, 80) : color.new(colorLong, 80)
+fill(maSourceFastPlot, maSourceSlowPlot, color=fillColor, fillgaps=true)
 
 // Trend Barmeter Plots
-plot(128.5, title = 'Trend Meter 1', style = plot.style_circles, color = TrendBar1Color, linewidth = 2)
-plot(122.5, title = 'Trend Meter 2', style = plot.style_circles, color = TrendBar2Color, linewidth = 2)
-plot(116.5, title = 'Trend Meter 3', style = plot.style_circles, color = TrendBar3Color, linewidth = 2)
+//plot(isPosNegPressureBullish ? 138.5 : na, 'Wave Trend - Positive Pressure', color = colorLong, style = plot.style_circles, linewidth = 2)
+//plot(isPosNegPressureBearish and OBIndicatorsYellowPointingDown ? 138.5 : na, 'Wave Trend - Negative Pressure', color = colorShort, style = plot.style_circles, linewidth = 2)
+//plot(TMSetups ? 134.5 : na, title = 'All 3 Trend Meters Now Align', style = plot.style_circles, color = MSBar2Color, linewidth = 3)
+//plot(TMSetupsANDWT and (PositiveWaveTrendCross and TrendBars3Positive or NegativeWaveTrendCross and TrendBars3Negative) ? 134.5 : na, title = 'Wave Trend X & All 3 Trend Meters Now Align', style = plot.style_cross, color = MSBar2Color, linewidth = 4)
 
-plot(ShowTrendBar1 and ShowTrendBar2 ? 110 : na, title = 'Trend Bar 1 - Thin Line', style = plot.style_line, color = TrendBar4Color1, linewidth = 4)
-plot(ShowTrendBar1 and not ShowTrendBar2 ? 110 : na, title = 'Trend Bar 1 - Thick Line', style = plot.style_line, color = TrendBar4Color1, linewidth = 9)
+//plot(128.5, title = 'Trend Meter 1', style = plot.style_circles, color = TrendBar1Color, linewidth = 2)
+//plot(122.5, title = 'Trend Meter 2', style = plot.style_circles, color = TrendBar2Color, linewidth = 2)
+//plot(116.5, title = 'Trend Meter 3', style = plot.style_circles, color = TrendBar3Color, linewidth = 2)
 
-plot(ShowTrendBar2 and ShowTrendBar1 ? 104.5 : na, title = 'Trend Bar 2 - Thin Line', style = plot.style_line, color = TrendBar5Color1, linewidth = 6)
-plot(ShowTrendBar2 and not ShowTrendBar1 ? 110 : na, title = 'Trend Bar 2 - Thick Line', style = plot.style_line, color = TrendBar5Color1, linewidth = 9)
+//plot(ShowTrendBar1 and ShowTrendBar2 ? 110 : na, title = 'Trend Bar 1 - Thin Line', style = plot.style_line, color = TrendBar4Color1, linewidth = 4)
+//plot(ShowTrendBar1 and not ShowTrendBar2 ? 110 : na, title = 'Trend Bar 1 - Thick Line', style = plot.style_line, color = TrendBar4Color1, linewidth = 9)
+
+//plot(ShowTrendBar2 and ShowTrendBar1 ? 104.5 : na, title = 'Trend Bar 2 - Thin Line', style = plot.style_line, color = TrendBar5Color1, linewidth = 6)
+//plot(ShowTrendBar2 and not ShowTrendBar1 ? 110 : na, title = 'Trend Bar 2 - Thick Line', style = plot.style_line, color = TrendBar5Color1, linewidth = 9)
 
 // Background Highlights
 TrendBar3BarsSame = TrendBars3Positive ? colorLong : TrendBars3Negative ? colorShort : na
-TMa = hline(113.7, color = color.new(color.white, 100))
-TMb = hline(131.3, color = color.new(color.white, 100))
-fill(TMa, TMb, color = color.new(TrendBar3BarsSame, 91), title = 'Trend Meter Background Highlight - 3 Trend Meter Conditions Met')
+//TMa = hline(113.7, color = color.new(color.white, 100))
+//TMb = hline(131.3, color = color.new(color.white, 100))
+//fill(TMa, TMb, color = color.new(TrendBar3BarsSame, 91), title = 'Trend Meter Background Highlight - 3 Trend Meter Conditions Met')
 
 // Fuzzy logic oscilator
-hline(100, title = 'Fuzzy Logic Maximum', color = color.new(color.white, 50))
+hline(100, title = 'Fuzzy Logic Maximum', color = color.new(color.white, 70))
 hline(bullishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorLong)
 hline(0, title = 'Fuzzy Logic Zero', color = color.white)
 hline(bearishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorShort)
-hline(-100, title = 'Fuzzy Logic Minimum', color = color.new(color.white, 50))
-plot(bullishWeightPercentage, title = 'Bullish Weight Percentage', color = colorLong, linewidth = 1)
-plot(-bearishWeightPercentage, title = 'Bearish Weight Percentage', color = colorShort, linewidth = 1)
-plot(ponderatedWeightPercentage, title = 'Ponderated Weight Percentage', color = color.new(color.white, 50), linewidth = 1)
+hline(-100, title = 'Fuzzy Logic Minimum', color = color.new(color.white, 70))
+plot(bullishWeightPercentage, title = 'Bullish Weight Percentage', color = color.new(colorLong, 70), linewidth = 1, force_overlay = false)
+plot(-bearishWeightPercentage, title = 'Bearish Weight Percentage', color = color.new(colorShort, 70), linewidth = 1, force_overlay = false)
+plot(ponderatedWeightPercentage, title = 'Ponderated Weight Percentage', color = color.white, linewidth = 1, force_overlay = false)
