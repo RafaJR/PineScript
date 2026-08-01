@@ -61,8 +61,10 @@ isMaBearishWeight = input.float(title = 'isMaBearishWeight', defval = 1, minval 
 isVolatilityBullishWeight = input.float(title = 'isVolatilityBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 isVolatilityBearishWeight = input.float(title = 'isVolatilityBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 
-bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 80, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -80, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
+bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 70, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+bullishOutSignalPercent = input.float(title = 'bullishOutSignalPercent', defval = 12, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -60, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
+bearishOutSignalPercent = input.float(title = 'bearishOutSignalPercent', defval = -12, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
 
 //********************************************************************************************************************************************************************************************************************
 // On fire booleans (true=green / false=red)
@@ -95,8 +97,6 @@ bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -80,
 colorLong = #95d697 // Green for bullish movements
 colorShort = #eb805c // Red for bearish movements
 colorNeutral = #9e9e9e5c // Grey color for ?
-colorVolatility = #6db1cc5c // Blue for volatility movements
-
 //******************************************************************************************************************************************************
 // Main indicators calculations
 //******************************************************************************************************************************************************
@@ -352,7 +352,7 @@ isVolatilityBearish = spike < lowerLine
 //******************************************************************************************************************************************************
 // Fuzzy logic calculations
 //******************************************************************************************************************************************************
-totalWeight = isPosNegPressureBullishWeight + isPosNegPressureBearishWeight + isBullishTrendBarWeight + isBearishTrendBarWeight + MACDHistogramCrossWeight + FastMACDHistogramCrossWeight + TopDogMomOverDadWeight + TopDogDadDirectionWeight + RSISigCrossWeight + RSI5Above50Weight + RSI13Above50Weight + colorvalueWeight + MACrossover1Weight + isBullishTrendBar4Weight + isBearishTrendBar4Weight + isBullishTrendBar5Weight + isBearishTrendBar5Weight
+totalWeight = isPosNegPressureBullishWeight + isPosNegPressureBearishWeight + isBullishTrendBarWeight + isBearishTrendBarWeight + MACDHistogramCrossWeight + FastMACDHistogramCrossWeight + TopDogMomOverDadWeight + TopDogDadDirectionWeight + RSISigCrossWeight + RSI5Above50Weight + RSI13Above50Weight + colorvalueWeight + MACrossover1Weight + isBullishTrendBar4Weight + isBearishTrendBar4Weight + isBullishTrendBar5Weight + isBearishTrendBar5Weight + isMaBullishWeight + isMaBearishWeight + isVolatilityBullishWeight + isVolatilityBearishWeight
 
 isPosNegPressureBullishWeight := totalWeight > 0 ? isPosNegPressureBullishWeight / totalWeight * 100 : 0
 isPosNegPressureBearishWeight := totalWeight > 0 ? isPosNegPressureBearishWeight / totalWeight * 100 : 0
@@ -379,7 +379,7 @@ isVolatilityBearishWeight := totalWeight > 0 ? isVolatilityBearishWeight / total
 bullishWeightPercentage = (isPosNegPressureBullish ? isPosNegPressureBullishWeight : 0) + (isPosNegPressureBearish ? isPosNegPressureBearishWeight : 0) + (isBullishTrendBar ? isBullishTrendBarWeight : 0) + (isBearishTrendBar ? isBearishTrendBarWeight : 0) + (MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (RSISigCross ? RSISigCrossWeight : 0) + (RSI5Above50 ? RSI5Above50Weight : 0) + (RSI13Above50 ? RSI13Above50Weight : 0) + (MACrossover1 ? MACrossover1Weight : 0) + (isBullishTrendBar4 ? isBullishTrendBar4Weight : 0) + (isBearishTrendBar4 ? isBearishTrendBar4Weight : 0) + (isBullishTrendBar5 ? isBullishTrendBar5Weight : 0) + (isBearishTrendBar5 ? isBearishTrendBar5Weight : 0) + (isMaBullish ? isMaBullishWeight : 0) + (isVolatilityBullish ? isVolatilityBullishWeight : 0)
 bearishWeightPercentage = (not isPosNegPressureBullish ? isPosNegPressureBullishWeight : 0) + (not isPosNegPressureBearish ? isPosNegPressureBearishWeight : 0) + (not isBullishTrendBar ? isBullishTrendBarWeight : 0) + (not isBearishTrendBar ? isBearishTrendBarWeight : 0) + (not MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (not FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (not TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (not TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (not RSISigCross ? RSISigCrossWeight : 0) + (not RSI5Above50 ? RSI5Above50Weight : 0) + (not RSI13Above50 ? RSI13Above50Weight : 0) + (not MACrossover1 ? MACrossover1Weight : 0) + (not isBullishTrendBar4 ? isBullishTrendBar4Weight : 0) + (not isBearishTrendBar4 ? isBearishTrendBar4Weight : 0) + (not isBullishTrendBar5 ? isBullishTrendBar5Weight : 0) + (not isBearishTrendBar5 ? isBearishTrendBar5Weight : 0) + (isMaBearish ? isMaBearishWeight : 0) + (isVolatilityBearish ? isVolatilityBearishWeight : 0)
 
-ponderatedWeightPercentage = bullishWeightPercentage - bearishWeightPercentage
+bearishWeightPercentage := bearishWeightPercentage * -1
 
 //******************************************************************************************************************************************************
 // Plotting
@@ -418,9 +418,16 @@ TrendBar3BarsSame = TrendBars3Positive ? colorLong : TrendBars3Negative ? colorS
 // Fuzzy logic oscilator
 hline(100, title = 'Fuzzy Logic Maximum', color = color.new(color.white, 70))
 hline(bullishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorLong)
+// Out zone
+bearishOutSignalPercentPlot = hline(bearishOutSignalPercent, title = 'uzzFy Logic bearishOutSignalPercent', color = color.white)
 hline(0, title = 'Fuzzy Logic Zero', color = color.white)
+bullishOutSignalPercentPlot = hline(bullishOutSignalPercent, title = 'uzzFy Logic bullishOutSignalPercent', color = color.white)
+fill(bearishOutSignalPercentPlot, bullishOutSignalPercentPlot, color=fillColor, fillgaps=true)
+
 hline(bearishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorShort)
 hline(-100, title = 'Fuzzy Logic Minimum', color = color.new(color.white, 70))
-plot(bullishWeightPercentage, title = 'Bullish Weight Percentage', color = color.new(colorLong, 70), linewidth = 1, force_overlay = false)
-plot(-bearishWeightPercentage, title = 'Bearish Weight Percentage', color = color.new(colorShort, 70), linewidth = 1, force_overlay = false)
-plot(ponderatedWeightPercentage, title = 'Ponderated Weight Percentage', color = color.white, linewidth = 1, force_overlay = false)
+plot(bullishWeightPercentage, title = 'Bullish Weight Percentage', color = colorLong, linewidth = 1, force_overlay = false)
+plot(bearishWeightPercentage, title = 'Bearish Weight Percentage', color = colorShort, linewidth = 1, force_overlay = false)
+
+
+//plot(ponderatedWeightPercentage, title = 'Ponderated Weight Percentage', color = color.white, linewidth = 1, force_overlay = false)
