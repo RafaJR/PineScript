@@ -443,9 +443,9 @@ var bool operationalBusy = false
 //bearishOutSignalPercent
 
 // Entry conditions
-longEntry := bullishWeightPercentage >= bullishSignalPercent
+longEntry := ta.crossover(bullishWeightPercentage, bullishSignalPercent)
 killLongEntry :=  bullishWeightPercentage <= bullishOutSignalPercent
-shortEntry := bearishWeightPercentage <= bearishSignalPercent
+shortEntry := ta.crossunder(bearishWeightPercentage, bearishSignalPercent)
 killShortEntry := bearishWeightPercentage >= bearishOutSignalPercent
 
 // Time parameters for testing
