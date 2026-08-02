@@ -1,0 +1,498 @@
+//@version=6
+strategy(title = 'Fuzzy Logic System Basic Strategy', shorttitle = 'FuzzyLogicSystemBasicStrategy', overlay = true, pyramiding = 0, calc_on_order_fills = false, commission_type = strategy.commission.percent, commission_value = 0.25, default_qty_type = strategy.percent_of_equity, default_qty_value = 95, initial_capital = 100, currency = currency.USD,  margin_long = 100,  margin_short = 100)
+
+// String constants for option values
+string OPT_MA_CROSSOVER = 'MA Crossover'
+string OPT_MACD_CROSSOVER = 'MACD Crossover'
+string OPT_MACD_CROSSOVER_12_26_9 = 'MACD Crossover - 12, 26, 9'
+string OPT_MACD_CROSSOVER_FAST = 'MACD Crossover - Fast - 8, 21, 5'
+string OPT_MOM_DAD_CROSS = 'Mom Dad Cross (Top Dog Trading)'
+string OPT_DAD_DIRECTION = 'DAD Direction (Top Dog Trading)'
+string OPT_RSI_SIG_CROSS = 'RSI Signal Line Cross - RSI 13, Sig 21'
+string OPT_RSI_5_50 = 'RSI 5: > or < 50'
+string OPT_RSI_13_50 = 'RSI 13: > or < 50'
+string OPT_TREND_CANDLES = 'Trend Candles'
+string OPT_NA = 'N/A'
+string OPT_MA_DIR_FAST_TB1 = 'MA Direction - Fast MA - TB1'
+string OPT_MA_DIR_SLOW_TB1 = 'MA Direction - Slow MA - TB1'
+string OPT_MA_DIR_FAST_TB2 = 'MA Direction - Fast MA - TB2'
+string OPT_MA_DIR_SLOW_TB2 = 'MA Direction - Slow MA - TB2'
+string OPT_EMA = 'EMA'
+string OPT_SMA = 'SMA'
+
+//******************************************************************************************************************************************************
+// Configuration inputs
+//******************************************************************************************************************************************************
+PosNegPressure = input.bool(defval = true, title = 'Pos / Neg Pressure', tooltip = 'Positive Pressure   = RSI14 and Wave Trend Over Sold with WT Delta Pointing Up                                                               Negative Pressure = RSI14 and Wave Trend Over Bought with WT Delta Pointing Down', group = 'Signals')
+TMSetups = input.bool(defval = true, title = 'Trend Meter Signal', tooltip = 'All 3 Trend Meters Now Align', group = 'Signals')
+TMSetupsANDWT = input.bool(defval = true, title = 'Wave Trend Cross Aligns with Trend Meter Signal', group = 'Signals')
+TrendBar1 = input.string(title = 'Trend Meter 1', defval = OPT_MACD_CROSSOVER_FAST, options = [OPT_MACD_CROSSOVER_12_26_9, OPT_MACD_CROSSOVER_FAST, OPT_MOM_DAD_CROSS, OPT_RSI_SIG_CROSS, OPT_RSI_13_50, OPT_RSI_5_50, OPT_TREND_CANDLES, OPT_NA], group = 'Trend Meters')
+TrendBar2 = input.string(title = 'Trend Meter 2', defval = OPT_RSI_13_50, options = [OPT_MACD_CROSSOVER_12_26_9, OPT_MACD_CROSSOVER_FAST, OPT_MOM_DAD_CROSS, OPT_RSI_SIG_CROSS, OPT_RSI_13_50, OPT_RSI_5_50, OPT_TREND_CANDLES, OPT_NA], group = 'Trend Meters')
+TrendBar3 = input.string(title = 'Trend Meter 3', defval = OPT_RSI_5_50, options = [OPT_MACD_CROSSOVER_12_26_9, OPT_MACD_CROSSOVER_FAST, OPT_MOM_DAD_CROSS, OPT_RSI_SIG_CROSS, OPT_RSI_13_50, OPT_RSI_5_50, OPT_TREND_CANDLES, OPT_NA], group = 'Trend Meters')
+DataSource = input.source(defval = close, title="Prize data source", group="General configuration")
+// Averange calculation parameters
+maType = input.string("VWMA", "Basis MA Type", options = ["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="Averange")
+fastEmaPeriod = input.int(50, title="Fast EMA", minval=1, step=10, inline="Fast EMA", group="EMAs")
+slowEmaPeriod = input.int(200, title="Slow EMA", minval=1, step=10, inline="Slow EMA", group="EMAs")
+
+// Configuration inputs
+volLenght = input.int(defval = 100, title = 'Length', minval = 1, step = 1, group = 'Volatility')
+
+// Fuzzy logic Inputs
+posNegPressureWeight = input.float(title = 'posNegPressureWeight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+trendBarWeight = input.float(title = 'isBullishTrendBarWeight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+MACDHistogramCrossWeight = input.float(title = 'MACDHistogramCrossWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+FastMACDHistogramCrossWeight = input.float(title = 'FastMACDHistogramCrossWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+TopDogMomOverDadWeight = input.float(title = 'TopDogMomOverDadWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+TopDogDadDirectionWeight = input.float(title = 'TopDogDadDirectionWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+RSISigCrossWeight = input.float(title = 'RSISigCrossWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+RSI5Above50Weight = input.float(title = 'RSI5Above50Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+RSI13Above50Weight = input.float(title = 'RSI13Above50Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+colorvalueWeight = input.float(title = 'colorvalueWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+MACrossover1Weight = input.float(title = 'MACrossover1Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+trendBar4Weight = input.float(title = 'trendBar4Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+trendBar5Weight = input.float(title = 'trendBar5Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+maWeight = input.float(title = 'maWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+volatilityWeight = input.float(title = 'isVolatilityBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+
+// Percentual singnals
+bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 70, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+bullishOutSignalPercent = input.float(title = 'bullishOutSignalPercent', defval = 12, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -70, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
+bearishOutSignalPercent = input.float(title = 'bearishOutSignalPercent', defval = -12, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
+
+// StopLoss / TakeProffit percents
+stopLossPercent = input.float(defval=100, title="Porcentaje de Stop Loss (%)", group="Risk control", step=0.1)
+
+//********************************************************************************************************************************************************************************************************************
+// On fire booleans (true=green / false=red)
+// First line little balls
+//    isPosNegPressureBullish
+//    isPosNegPressureBearish
+// Second line icons (+, .)
+//    isBullishTrendBar
+//    isBearishTrendBar
+// First trend bar
+//  OPT_MACD_CROSSOVER_12_26_9 	MACDHistogramCross
+//  OPT_MACD_CROSSOVER_FAST	    FastMACDHistogramCross
+//  OPT_MOM_DAD_CROSS	        TopDogMomOverDad
+//  OPT_DAD_DIRECTION	        TopDogDadDirection
+//  OPT_RSI_SIG_CROSS	        RSISigCross
+//  OPT_RSI_5_50	            RSI5Above50
+//  OPT_RSI_13_50	            RSI13Above50
+//  OPT_TREND_CANDLES	        colorvalue
+//  OPT_MA_CROSSOVER	        MACrossover1
+// First trend bar
+//    isBullishTrendBar4
+//    isBearishTrendBar4
+// Second trend bar
+//    isBullishTrendBar5
+//    isBearishTrendBar5
+//
+//********************************************************************************************************************************************************************************************************************
+
+// colors
+colorLong = #95d697 // Green for bullish movements
+colorShort = #eb805c // Red for bearish movements
+colorNeutral = #9e9e9e5c // Grey color for ?
+//******************************************************************************************************************************************************
+// Main indicators calculations
+//******************************************************************************************************************************************************
+// Wave Trend - RSI
+RSIMC = ta.rsi(DataSource, 14)
+
+// Wave Trend
+ap = hlc3
+n1 = 9
+n2 = 12
+esa = ta.ema(ap, n1)
+de = ta.ema(math.abs(ap - esa), n1)
+ci = (ap - esa) / (0.015 * de)
+tci = ta.ema(ci, n2)
+wt1 = tci
+wt2 = ta.sma(wt1, 3)
+
+YellowWave = wt1 - wt2
+
+obLevel2 = 60
+obLevel = 50
+osLevel = -50
+osLevel2 = -60
+
+// Wave Trend - Conditions
+WTCross = ta.cross(wt1, wt2)
+WTCrossUp = wt2 - wt1 <= 0
+WTCrossDown = wt2 - wt1 >= 0
+WTOverSold = wt2 <= osLevel2
+WTOverBought = wt2 >= obLevel2
+
+// MA Inputs
+ShowTrendBar1 = input.bool(true, 'Trend Bar 1', group = 'Trend Bar 1', inline = 'Trend Bar 1')
+ShowTrendBar2 = input.bool(true, 'Trend Bar 2', group = 'Trend Bar 2', inline = 'Trend Bar 2')
+TrendBar4 = input.string(title = '', defval = OPT_MA_CROSSOVER, options = [OPT_MA_CROSSOVER, OPT_MA_DIR_FAST_TB1, OPT_MA_DIR_SLOW_TB1], group = 'Trend Bar 1', inline = 'Trend Bar 1')
+TrendBar5 = input.string(title = '', defval = OPT_MA_CROSSOVER, options = [OPT_MA_CROSSOVER, OPT_MA_DIR_FAST_TB2, OPT_MA_DIR_SLOW_TB2], group = 'Trend Bar 2', inline = 'Trend Bar 2')
+
+MA1_Length = input.int(5, title = 'Fast MA', minval = 1, group = 'Trend Bar 1', inline = 'TB1 Fast')
+MA1_Type = input.string(title = '', defval = OPT_EMA, options = [OPT_EMA, OPT_SMA], group = 'Trend Bar 1', inline = 'TB1 Fast')
+
+MA2_Length = input.int(11, title = 'Slow MA', minval = 1, group = 'Trend Bar 1', inline = 'TB1 Slow')
+MA2_Type = input.string(title = '', defval = OPT_EMA, options = [OPT_EMA, OPT_SMA], group = 'Trend Bar 1', inline = 'TB1 Slow')
+
+MA3_Length = input.int(13, title = 'Fast MA', minval = 1, group = 'Trend Bar 2', inline = 'TB2 Fast')
+MA3_Type = input.string(title = '', defval = OPT_EMA, options = [OPT_EMA, OPT_SMA], group = 'Trend Bar 2', inline = 'TB2 Fast')
+
+MA4_Length = input.int(36, title = 'Slow MA', minval = 1, group = 'Trend Bar 2', inline = 'TB2 Slow')
+MA4_Type = input.string(title = '', defval = OPT_SMA, options = [OPT_EMA, OPT_SMA], group = 'Trend Bar 2', inline = 'TB2 Slow')
+
+
+// MA Calculations
+
+MA1 = if MA1_Type == OPT_SMA
+    ta.sma(DataSource, MA1_Length)
+else
+    ta.ema(DataSource, MA1_Length)
+
+MA2 = if MA2_Type == OPT_SMA
+    ta.sma(DataSource, MA2_Length)
+else
+    ta.ema(DataSource, MA2_Length)
+
+MA3 = if MA3_Type == OPT_SMA
+    ta.sma(DataSource, MA3_Length)
+else
+    ta.ema(DataSource, MA3_Length)
+
+MA4 = if MA4_Type == OPT_SMA
+    ta.sma(DataSource, MA4_Length)
+else
+    ta.ema(DataSource, MA4_Length)
+
+// MA Crossover Condition
+MACrossover1 = MA1 > MA2 ? true : false
+MACrossover2 = MA3 > MA4 ? true : false
+
+// MA Direction Condition
+MA1Direction = MA1 > MA1[1] ? true : false
+MA2Direction = MA2 > MA2[1] ? true : false
+MA3Direction = MA3 > MA3[1] ? true : false
+MA4Direction = MA4 > MA4[1] ? true : false
+
+// MACD and MOM & DAD - Top Dog Trading
+// Standard MACD Calculations
+MACDfastMA = 12
+MACDslowMA = 26
+MACDsignalSmooth = 9
+
+MACDLine = ta.ema(DataSource, MACDfastMA) - ta.ema(DataSource, MACDslowMA)
+SignalLine = ta.ema(MACDLine, MACDsignalSmooth)
+MACDHistogram = MACDLine - SignalLine
+
+// MACD- Background Color Change Condition
+MACDHistogramCross = MACDHistogram > 0
+MACDLineOverZero = MACDLine > 0
+
+// Fast MACD Calculations
+FastMACDfastMA = 8
+FastMACDslowMA = 21
+FastMACDsignalSmooth = 5
+FastMACDLine = ta.ema(DataSource, FastMACDfastMA) - ta.ema(DataSource, FastMACDslowMA)
+FastSignalLine = ta.ema(FastMACDLine, FastMACDsignalSmooth)
+FastMACDHistogram = FastMACDLine - FastSignalLine
+
+// Fast MACD- Background Color Change Condition
+FastMACDHistogramCross = FastMACDHistogram > 0
+FastMACDLineOverZero = FastMACDLine > 0
+
+// Top Dog Trading - Mom Dad Calculations
+TopDog_Fast_MA = 5
+TopDog_Slow_MA = 20
+TopDog_Sig = 30
+TopDogMom = ta.ema(DataSource, TopDog_Fast_MA) - ta.ema(DataSource, TopDog_Slow_MA)
+TopDogDad = ta.ema(TopDogMom, TopDog_Sig)
+
+// Top Dog Dad - Background Color Change Condition
+TopDogDadDirection = TopDogDad > TopDogDad[1]
+TopDogMomOverDad = TopDogMom > TopDogDad
+TopDogMomOverZero = TopDogMom > 0
+
+////// Trend Barmeter Calculations //////
+// UCS_Trend / Trend Candles Trend Barmeter Calculations
+haDataSource = ohlc4
+haopen = 0.0
+haopen := na(haopen[1]) ? (open + DataSource) / 2 : (haopen[1] + haDataSource[1]) / 2
+
+ccolor = haDataSource - haopen > 0 ? true : false
+
+inside6 = haopen <= math.max(haopen[6], haDataSource[6]) and haopen >= math.min(haopen[6], haDataSource[6]) and haDataSource <= math.max(haopen[6], haDataSource[6]) and haDataSource >= math.min(haopen[6], haDataSource[6]) ? true : false
+inside5 = haopen <= math.max(haopen[5], haDataSource[5]) and haopen >= math.min(haopen[5], haDataSource[5]) and haDataSource <= math.max(haopen[5], haDataSource[5]) and haDataSource >= math.min(haopen[5], haDataSource[5]) ? true : false
+inside4 = haopen <= math.max(haopen[4], haDataSource[4]) and haopen >= math.min(haopen[4], haDataSource[4]) and haDataSource <= math.max(haopen[4], haDataSource[4]) and haDataSource >= math.min(haopen[4], haDataSource[4]) ? true : false
+inside3 = haopen <= math.max(haopen[3], haDataSource[3]) and haopen >= math.min(haopen[3], haDataSource[3]) and haDataSource <= math.max(haopen[3], haDataSource[3]) and haDataSource >= math.min(haopen[3], haDataSource[3]) ? true : false
+inside2 = haopen <= math.max(haopen[2], haDataSource[2]) and haopen >= math.min(haopen[2], haDataSource[2]) and haDataSource <= math.max(haopen[2], haDataSource[2]) and haDataSource >= math.min(haopen[2], haDataSource[2]) ? true : false
+inside1 = haopen <= math.max(haopen[1], haDataSource[1]) and haopen >= math.min(haopen[1], haDataSource[1]) and haDataSource <= math.max(haopen[1], haDataSource[1]) and haDataSource >= math.min(haopen[1], haDataSource[1]) ? true : false
+
+colorvalue = inside6 ? ccolor[6] : inside5 ? ccolor[5] : inside4 ? ccolor[4] : inside3 ? ccolor[3] : inside2 ? ccolor[2] : inside1 ? ccolor[1] : ccolor
+
+TrendBarTrend_Candle_Color = colorvalue ? colorLong : colorShort
+TrendBarTrend_Candle = colorvalue
+
+// RSI 5 Trend Barmeter Calculations
+RSI5 = ta.rsi(DataSource, 5)
+RSI5Above50 = RSI5 > 50
+RSI5Color = RSI5Above50 ? colorLong : colorShort
+TrendBarRSI5Color = RSI5Above50 ? colorLong : colorShort
+
+// RSI 13 Trend Barmeter Calculations
+RSI13 = ta.rsi(DataSource, 13)
+
+// Linear Regression Calculation For RSI Signal Line
+SignalLineLength1 = 21
+x = bar_index
+y = RSI13
+x_ = ta.sma(x, SignalLineLength1)
+y_ = ta.sma(y, SignalLineLength1)
+mx = ta.stdev(x, SignalLineLength1)
+my = ta.stdev(y, SignalLineLength1)
+c = ta.correlation(x, y, SignalLineLength1)
+slope = c * (my / mx)
+inter = y_ - slope * x_
+LinReg1 = x * slope + inter
+
+RSISigDirection = LinReg1 > LinReg1[1]
+RSISigCross = RSI13 > LinReg1
+RSI13Above50 = RSI13 > 50
+
+// Trend Barmeter Color Calculation
+RSI13Color = RSI13Above50 ? colorLong : colorShort
+TrendBarRSI13Color = RSI13Above50 ? colorLong : colorShort
+TrendBarRSISigCrossColor = RSISigCross ? colorLong : colorShort
+TrendBarMACDColor = MACDHistogramCross ? colorLong : colorShort
+TrendBarFastMACDColor = FastMACDHistogramCross ? colorLong : colorShort
+TrendBarMACrossColor = MACrossover1 ? colorLong : colorShort
+TrendBarMomOverDadColor = TopDogMomOverDad ? colorLong : colorShort
+TrendBarDadDirectionColor = TopDogDadDirection ? colorLong : colorShort
+
+TrendBar1Result = TrendBar1 == OPT_MA_CROSSOVER ? MACrossover1 : TrendBar1 == OPT_MACD_CROSSOVER_12_26_9 ? MACDHistogramCross : TrendBar1 == OPT_MACD_CROSSOVER_FAST ? FastMACDHistogramCross : TrendBar1 == OPT_MOM_DAD_CROSS ? TopDogMomOverDad : TrendBar1 == OPT_DAD_DIRECTION ? TopDogDadDirection : TrendBar1 == OPT_RSI_SIG_CROSS ? RSISigCross : TrendBar1 == OPT_RSI_5_50 ? RSI5Above50 : TrendBar1 == OPT_RSI_13_50 ? RSI13Above50 : TrendBar1 == OPT_TREND_CANDLES ? TrendBarTrend_Candle : false
+TrendBar2Result = TrendBar2 == OPT_MA_CROSSOVER ? MACrossover1 : TrendBar2 == OPT_MACD_CROSSOVER_12_26_9 ? MACDHistogramCross : TrendBar2 == OPT_MACD_CROSSOVER_FAST ? FastMACDHistogramCross : TrendBar2 == OPT_MOM_DAD_CROSS ? TopDogMomOverDad : TrendBar2 == OPT_DAD_DIRECTION ? TopDogDadDirection : TrendBar2 == OPT_RSI_SIG_CROSS ? RSISigCross : TrendBar2 == OPT_RSI_5_50 ? RSI5Above50 : TrendBar2 == OPT_RSI_13_50 ? RSI13Above50 : TrendBar2 == OPT_TREND_CANDLES ? TrendBarTrend_Candle : false
+TrendBar3Result = TrendBar3 == OPT_MA_CROSSOVER ? MACrossover1 : TrendBar3 == OPT_MACD_CROSSOVER_12_26_9 ? MACDHistogramCross : TrendBar3 == OPT_MACD_CROSSOVER_FAST ? FastMACDHistogramCross : TrendBar3 == OPT_MOM_DAD_CROSS ? TopDogMomOverDad : TrendBar3 == OPT_DAD_DIRECTION ? TopDogDadDirection : TrendBar3 == OPT_RSI_SIG_CROSS ? RSISigCross : TrendBar3 == OPT_RSI_5_50 ? RSI5Above50 : TrendBar3 == OPT_RSI_13_50 ? RSI13Above50 : TrendBar3 == OPT_TREND_CANDLES ? TrendBarTrend_Candle : false
+
+TrendBars3Positive = TrendBar1Result and TrendBar2Result and TrendBar3Result
+TrendBars3Negative = not TrendBar1Result and not TrendBar2Result and not TrendBar3Result
+
+PositiveWaveTrendCross = WTCross and WTCrossUp
+NegativeWaveTrendCross = WTCross and WTCrossDown
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+isBullishTrendBar = TrendBars3Positive and not TrendBars3Positive[1]
+isBearishTrendBar = TrendBars3Negative and not TrendBars3Negative[1]
+
+// Signals Color Calculations
+MSBar2Color = isBullishTrendBar ? colorLong : isBearishTrendBar ? colorShort : colorNeutral
+
+// Trend Barmeter Color Assignments
+TrendBar1Color = TrendBar1 == OPT_NA ? colorNeutral : TrendBar1 == OPT_MACD_CROSSOVER_12_26_9 ? TrendBarMACDColor : TrendBar1 == OPT_MACD_CROSSOVER_FAST ? TrendBarFastMACDColor : TrendBar1 == OPT_MOM_DAD_CROSS ? TrendBarMomOverDadColor : TrendBar1 == OPT_DAD_DIRECTION ? TrendBarDadDirectionColor : TrendBar1 == OPT_RSI_SIG_CROSS ? TrendBarRSISigCrossColor : TrendBar1 == OPT_RSI_5_50 ? TrendBarRSI5Color : TrendBar1 == OPT_RSI_13_50 ? TrendBarRSI13Color : TrendBar1 == OPT_TREND_CANDLES ? TrendBarTrend_Candle_Color : TrendBar1 == OPT_MA_CROSSOVER ? TrendBarMACrossColor : colorNeutral
+TrendBar2Color = TrendBar2 == OPT_NA ? colorNeutral : TrendBar2 == OPT_MACD_CROSSOVER_12_26_9 ? TrendBarMACDColor : TrendBar2 == OPT_MACD_CROSSOVER_FAST ? TrendBarFastMACDColor : TrendBar2 == OPT_MOM_DAD_CROSS ? TrendBarMomOverDadColor : TrendBar2 == OPT_DAD_DIRECTION ? TrendBarDadDirectionColor : TrendBar2 == OPT_RSI_SIG_CROSS ? TrendBarRSISigCrossColor : TrendBar2 == OPT_RSI_5_50 ? TrendBarRSI5Color : TrendBar2 == OPT_RSI_13_50 ? TrendBarRSI13Color : TrendBar2 == OPT_TREND_CANDLES ? TrendBarTrend_Candle_Color : TrendBar2 == OPT_MA_CROSSOVER ? TrendBarMACrossColor : colorNeutral
+TrendBar3Color = TrendBar3 == OPT_NA ? colorNeutral : TrendBar3 == OPT_MACD_CROSSOVER_12_26_9 ? TrendBarMACDColor : TrendBar3 == OPT_MACD_CROSSOVER_FAST ? TrendBarFastMACDColor : TrendBar3 == OPT_MOM_DAD_CROSS ? TrendBarMomOverDadColor : TrendBar3 == OPT_DAD_DIRECTION ? TrendBarDadDirectionColor : TrendBar3 == OPT_RSI_SIG_CROSS ? TrendBarRSISigCrossColor : TrendBar3 == OPT_RSI_5_50 ? TrendBarRSI5Color : TrendBar3 == OPT_RSI_13_50 ? TrendBarRSI13Color : TrendBar3 == OPT_TREND_CANDLES ? TrendBarTrend_Candle_Color : TrendBar3 == OPT_MA_CROSSOVER ? TrendBarMACrossColor : colorNeutral
+
+CrossoverType2 = TrendBar4 == OPT_DAD_DIRECTION ? TopDogDadDirection : TrendBar4 == OPT_MACD_CROSSOVER ? MACDHistogramCross : TrendBar4 == OPT_MA_DIR_FAST_TB1 ? MA1Direction : TrendBar4 == OPT_MA_DIR_SLOW_TB1 ? MA2Direction : MACrossover1
+
+isBullishTrendBar4 = TrendBar4 != OPT_NA and CrossoverType2
+isBearishTrendBar4 = TrendBar4 != OPT_NA and not CrossoverType2
+
+TrendBar4Color1 = isBullishTrendBar4 ? colorLong : isBearishTrendBar4 ? colorShort : colorNeutral
+
+
+CrossoverType3 = TrendBar5 == OPT_DAD_DIRECTION ? TopDogDadDirection : TrendBar5 == OPT_MACD_CROSSOVER ? MACDHistogramCross : TrendBar5 == OPT_MA_DIR_FAST_TB2 ? MA3Direction : TrendBar5 == OPT_MA_DIR_SLOW_TB2 ? MA4Direction : MACrossover2
+
+isBullishTrendBar5 = TrendBar5 != OPT_NA and CrossoverType3
+isBearishTrendBar5 = TrendBar5 != OPT_NA and not CrossoverType3
+TrendBar5Color1 = isBullishTrendBar5 ? colorLong : isBearishTrendBar5 ? colorShort : colorNeutral
+
+WTVOB = wt1 > 60
+WTVOS = wt1 < -60
+
+// Weekness / Pos/Neg Pressure
+YellowWavePointingUp = YellowWave > YellowWave[1]
+
+RSI14 = ta.rsi(DataSource, 14)
+RSI14OB = RSI14 > 70 ? true : false
+RSI14OS = RSI14 < 30 ? true : false
+
+OBIndicatorsYellowPointingDown = (RSI14OB or RSI14OB[1]) and WTVOB and not YellowWavePointingUp
+OSIndicatorsYellowPointingUp = (RSI14OS or RSI14OS[1]) and WTVOS and YellowWavePointingUp
+
+isPosNegPressureBullish = PosNegPressure and OSIndicatorsYellowPointingUp
+isPosNegPressureBearish = PosNegPressure and OBIndicatorsYellowPointingDown
+
+// MAs calculations
+// Setting de MAS type
+maSource(float source, int length, simple string maType) =>
+    switch maType
+        "SMA" => ta.sma(DataSource, length)
+        "EMA" => ta.ema(DataSource, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+
+maFastSource = maSource(DataSource, fastEmaPeriod, maType)
+maSlowSource = maSource(DataSource, slowEmaPeriod, maType)
+
+isMaBearish = maSlowSource > maFastSource
+isMaBullish = maSlowSource < maFastSource
+
+// Volatility Oscillator calculations
+spike = close - open
+upperLine = ta.stdev(spike, volLenght)
+lowerLine = -upperLine
+
+isVolatilityBullish = spike > upperLine
+isVolatilityBearish = spike < lowerLine
+
+//******************************************************************************************************************************************************
+// Fuzzy logic calculations
+//******************************************************************************************************************************************************
+totalWeight = posNegPressureWeight + trendBarWeight + MACDHistogramCrossWeight + FastMACDHistogramCrossWeight + TopDogMomOverDadWeight + TopDogDadDirectionWeight + RSISigCrossWeight + RSI5Above50Weight + RSI13Above50Weight + colorvalueWeight + MACrossover1Weight + trendBar4Weight + trendBar5Weight + maWeight + volatilityWeight
+int percent = 100
+posNegPressureWeight := posNegPressureWeight / totalWeight * percent
+trendBarWeight := trendBarWeight / totalWeight * percent
+MACDHistogramCrossWeight := MACDHistogramCrossWeight / totalWeight * percent
+FastMACDHistogramCrossWeight := FastMACDHistogramCrossWeight / totalWeight * percent
+TopDogMomOverDadWeight := TopDogMomOverDadWeight / totalWeight * percent
+TopDogDadDirectionWeight := TopDogDadDirectionWeight / totalWeight * percent
+RSISigCrossWeight := RSISigCrossWeight / totalWeight * percent
+RSI5Above50Weight := RSI5Above50Weight / totalWeight * percent
+RSI13Above50Weight := RSI13Above50Weight / totalWeight * percent
+colorvalueWeight := colorvalueWeight / totalWeight * percent
+MACrossover1Weight := MACrossover1Weight / totalWeight * percent
+trendBar4Weight := trendBar4Weight / totalWeight * percent
+trendBar5Weight := trendBar5Weight / totalWeight * percent
+maWeight := maWeight / totalWeight * percent
+volatilityWeight := volatilityWeight / totalWeight * percent
+
+bullishWeightPercentage = (isPosNegPressureBullish ? posNegPressureWeight : 0)  + (isBullishTrendBar ? trendBarWeight : 0) + (MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (RSISigCross ? RSISigCrossWeight : 0) + (colorvalue ? colorvalueWeight: 0) + (RSI5Above50 ? RSI5Above50Weight : 0) + (RSI13Above50 ? RSI13Above50Weight : 0) + (MACrossover1 ? MACrossover1Weight : 0) + (isBullishTrendBar4 ? trendBar4Weight : 0) + (isBullishTrendBar5 ? trendBar5Weight : 0) + (isMaBullish ? maWeight : 0) + (isVolatilityBullish ? volatilityWeight : 0)
+bearishWeightPercentage = (isPosNegPressureBearish ? posNegPressureWeight *-1 : 0) + (isBearishTrendBar ? trendBarWeight *-1 : 0) + (not MACDHistogramCross ? MACDHistogramCrossWeight *-1 : 0) + (not FastMACDHistogramCross ? FastMACDHistogramCrossWeight *-1 : 0) + (not TopDogMomOverDad ? TopDogMomOverDadWeight *-1 : 0) + (not TopDogDadDirection ? TopDogDadDirectionWeight *-1 : 0) + (not RSISigCross ? RSISigCrossWeight *-1: 0) + (not colorvalue ? colorvalueWeight *-1: 0) + (not RSI5Above50 ? RSI5Above50Weight *-1: 0) + (not RSI13Above50 ? RSI13Above50Weight *-1 : 0) + (not MACrossover1 ? MACrossover1Weight *-1 : 0) + (isBearishTrendBar4 ? trendBar4Weight *-1 : 0) + (isBearishTrendBar5 ? trendBar5Weight *-1 : 0) + (isMaBearish ? maWeight *-1 : 0) + (isVolatilityBearish ? volatilityWeight *-1 : 0)
+
+//bearishWeightPercentage := bearishWeightPercentage * -1
+
+//******************************************************************************************************************************************************
+// Plotting
+//******************************************************************************************************************************************************
+// EMAs Plotting
+maSourceSlowColor = maSlowSource < DataSource ? colorLong : colorShort
+maSourceFastColor = maFastSource < DataSource ? colorLong : colorShort
+maSourceSlowPlot = plot(series=maSlowSource, title="maSource", color=maSourceSlowColor, linewidth = 2, force_overlay = true)
+maSourceFastPlot = plot(series=maFastSource, title="maSource", color=maSourceFastColor, linewidth = 1, force_overlay = true)
+
+fillMAColor = isMaBearish ? color.new(colorShort, 80) : color.new(colorLong, 80)
+fill(maSourceFastPlot, maSourceSlowPlot, color=fillMAColor, fillgaps=true)
+
+// Trend Barmeter Plots
+//plot(isPosNegPressureBullish ? 138.5 : na, 'Wave Trend - Positive Pressure', color = colorLong, style = plot.style_circles, linewidth = 2)
+//plot(isPosNegPressureBearish and OBIndicatorsYellowPointingDown ? 138.5 : na, 'Wave Trend - Negative Pressure', color = colorShort, style = plot.style_circles, linewidth = 2)
+//plot(TMSetups ? 134.5 : na, title = 'All 3 Trend Meters Now Align', style = plot.style_circles, color = MSBar2Color, linewidth = 3)
+//plot(TMSetupsANDWT and (PositiveWaveTrendCross and TrendBars3Positive or NegativeWaveTrendCross and TrendBars3Negative) ? 134.5 : na, title = 'Wave Trend X & All 3 Trend Meters Now Align', style = plot.style_cross, color = MSBar2Color, linewidth = 4)
+
+//plot(128.5, title = 'Trend Meter 1', style = plot.style_circles, color = TrendBar1Color, linewidth = 2)
+//plot(122.5, title = 'Trend Meter 2', style = plot.style_circles, color = TrendBar2Color, linewidth = 2)
+//plot(116.5, title = 'Trend Meter 3', style = plot.style_circles, color = TrendBar3Color, linewidth = 2)
+
+//plot(ShowTrendBar1 and ShowTrendBar2 ? 110 : na, title = 'Trend Bar 1 - Thin Line', style = plot.style_line, color = TrendBar4Color1, linewidth = 4)
+//plot(ShowTrendBar1 and not ShowTrendBar2 ? 110 : na, title = 'Trend Bar 1 - Thick Line', style = plot.style_line, color = TrendBar4Color1, linewidth = 9)
+
+//plot(ShowTrendBar2 and ShowTrendBar1 ? 104.5 : na, title = 'Trend Bar 2 - Thin Line', style = plot.style_line, color = TrendBar5Color1, linewidth = 6)
+//plot(ShowTrendBar2 and not ShowTrendBar1 ? 110 : na, title = 'Trend Bar 2 - Thick Line', style = plot.style_line, color = TrendBar5Color1, linewidth = 9)
+
+// Fuzzy logic oscilator
+hline(100, title = 'Fuzzy Logic Maximum', color = color.new(color.white, 70))
+bullishSignalPercentPlot = plot(bullishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorLong)
+// Out zone
+bearishOutSignalPercentPlot = plot(bearishOutSignalPercent, title = 'FuzzFy Logic bearishOutSignalPercent', color = color.white)
+hline(0, title = 'Fuzzy Logic Zero', color = color.white)
+bullishOutSignalPercentPlot = plot(bullishOutSignalPercent, title = 'FuzzFy Logic bullishOutSignalPercent', color = color.white)
+
+bearishSignalPercentPlot = plot(bearishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorShort)
+hline(-100, title = 'Fuzzy Logic Minimum', color = color.new(color.white, 70))
+bullishWeightPercentagePlot = plot(bullishWeightPercentage, title = 'Bullish Weight Percentage', color = colorLong, linewidth = 1, force_overlay = false)
+bearishWeightPercentagePlot = plot(bearishWeightPercentage, title = 'Bearish Weight Percentage', color = colorShort, linewidth = 1, force_overlay = false)
+fillFuzzyBullishColor = bullishWeightPercentage >= bullishSignalPercent ? color.new(colorLong, 60) : color.new(color.black, 100)
+fillFuzzyBearishColor = bearishWeightPercentage <= bearishSignalPercent ? color.new(colorShort, 60) : color.new(color.black, 100)
+//fill(bearishOutSignalPercentPlot, bullishOutSignalPercentPlot, color=fillMAColor, fillgaps=true)
+fill(bullishWeightPercentagePlot, bullishSignalPercentPlot, color=fillFuzzyBullishColor, fillgaps=true)
+fill(bearishWeightPercentagePlot, bearishSignalPercentPlot, color=fillFuzzyBearishColor, fillgaps=true)
+
+fill(bearishOutSignalPercentPlot, bullishOutSignalPercentPlot, color=color.new(color.white, 90), fillgaps=true)
+fillFuzzyOutBullishColor = bullishWeightPercentage <= bullishOutSignalPercent ? color.new(colorShort, 60) : color.new(color.black, 100)
+fill(bullishWeightPercentagePlot, bullishOutSignalPercentPlot, color=fillFuzzyOutBullishColor, fillgaps=true)
+fillFuzzyOutBearishColor = bearishWeightPercentage >= bearishOutSignalPercent ? color.new(colorLong, 60) : color.new(color.black, 100)
+fill(bearishWeightPercentagePlot, bearishOutSignalPercentPlot, color=fillFuzzyOutBearishColor, fillgaps=true)
+
+//***************************************************************************************************************************************************************
+// Operation orders
+//***************************************************************************************************************************************************************
+// Entry vars inicialization
+var bool killLongEntry = false
+var bool killShortEntry = false
+var bool longEntry = false
+var bool shortEntry = false
+var bool operationalBusy = false
+
+//bullishWeightPercentage
+//bearishWeightPercentage
+//bullishSignalPercent
+//bullishOutSignalPercent
+//bearishSignalPercent
+//bearishOutSignalPercent
+
+// Entry conditions
+longEntry := bullishWeightPercentage >= bullishSignalPercent
+killLongEntry :=  bullishWeightPercentage <= bullishOutSignalPercent
+shortEntry := bearishWeightPercentage <= bearishSignalPercent
+killShortEntry := bearishWeightPercentage >= bearishOutSignalPercent
+
+// Time parameters for testing
+//if (year == 2025 and month == 1 and dayofmonth >= 6 and dayofmonth <= 7)
+//if (year == currentYear and month == currentMonth)
+//if (year == currentYear)
+if (true)
+    // Operation nomenclature variables
+    var int longOpCount = 0
+    var int shortOpCount = 0
+    var string longOpName = ""
+    var string shortOpName = ""
+
+    if(killLongEntry)
+        strategy.close(id=longOpName)
+        operationalBusy := false
+    if(killShortEntry)
+        strategy.close(id=shortOpName)
+        operationalBusy := false
+    if (longEntry and not operationalBusy)
+        longOpCount += 1
+        longOpName := "Long"
+        longOpComment = longOpName + str.tostring(longOpCount)
+        strategy.entry(id=longOpName, direction=strategy.long, comment=longOpComment)
+        stopLossPrize = strategy.position_avg_price * (1 - stopLossPercent / 100)
+        strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, comment_profit = "TP" + str.tostring(longOpCount), comment_loss = "SL" + str.tostring(longOpCount))
+        operationalBusy := true
+    if (shortEntry and not operationalBusy)
+        shortOpCount += 1
+        shortOpName := "Short"
+        shortOpComment = shortOpName + str.tostring(shortOpCount)
+        strategy.entry(id=shortOpName, direction=strategy.short, comment=shortOpComment)
+        stopLossPrize = strategy.position_avg_price * (1 + stopLossPercent / 100)
+        strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, comment_profit = "TP" + str.tostring(shortOpCount), comment_loss = "SL" + str.tostring(longOpCount))
+        operationalBusy := true
+    if (strategy.position_size == 0)
+        operationalBusy := false
+    // Stop Loss update
+    //if (operationalBusy)
+    //    bool isLongActive = strategy.position_size > 0
+    //    bool isShortActive = strategy.position_size < 0
+
+    //    if (isLongActive and sarBecomeBullish)
+    //        strategy.exit(id=longOpName, from_entry=longOpName, stop=currentLowest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+    //    if (isShortActive and sarBecomeBearish)
+    //        strategy.exit(id=shortOpName, from_entry=shortOpName, stop=currentHighest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+    //    if (isLongActive and not longEntrySustainable)
+    //        strategy.exit(id=longOpName, from_entry=longOpName, profit=currentHighest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+    //    if (isShortActive and not shortEntrySustainable)
+    //  
