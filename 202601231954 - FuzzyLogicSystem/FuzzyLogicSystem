@@ -390,8 +390,8 @@ maSourceFastColor = maFastSource < DataSource ? colorLong : colorShort
 maSourceSlowPlot = plot(series=maSlowSource, title="maSource", color=maSourceSlowColor, linewidth = 2, force_overlay = true)
 maSourceFastPlot = plot(series=maFastSource, title="maSource", color=maSourceFastColor, linewidth = 1, force_overlay = true)
 
-fillColor = isMaBearish ? color.new(colorShort, 80) : color.new(colorLong, 80)
-fill(maSourceFastPlot, maSourceSlowPlot, color=fillColor, fillgaps=true)
+fillMAColor = isMaBearish ? color.new(colorShort, 80) : color.new(colorLong, 80)
+fill(maSourceFastPlot, maSourceSlowPlot, color=fillMAColor, fillgaps=true)
 
 // Trend Barmeter Plots
 //plot(isPosNegPressureBullish ? 138.5 : na, 'Wave Trend - Positive Pressure', color = colorLong, style = plot.style_circles, linewidth = 2)
@@ -409,25 +409,17 @@ fill(maSourceFastPlot, maSourceSlowPlot, color=fillColor, fillgaps=true)
 //plot(ShowTrendBar2 and ShowTrendBar1 ? 104.5 : na, title = 'Trend Bar 2 - Thin Line', style = plot.style_line, color = TrendBar5Color1, linewidth = 6)
 //plot(ShowTrendBar2 and not ShowTrendBar1 ? 110 : na, title = 'Trend Bar 2 - Thick Line', style = plot.style_line, color = TrendBar5Color1, linewidth = 9)
 
-// Background Highlights
-TrendBar3BarsSame = TrendBars3Positive ? colorLong : TrendBars3Negative ? colorShort : na
-//TMa = hline(113.7, color = color.new(color.white, 100))
-//TMb = hline(131.3, color = color.new(color.white, 100))
-//fill(TMa, TMb, color = color.new(TrendBar3BarsSame, 91), title = 'Trend Meter Background Highlight - 3 Trend Meter Conditions Met')
-
 // Fuzzy logic oscilator
 hline(100, title = 'Fuzzy Logic Maximum', color = color.new(color.white, 70))
 hline(bullishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorLong)
 // Out zone
-bearishOutSignalPercentPlot = hline(bearishOutSignalPercent, title = 'uzzFy Logic bearishOutSignalPercent', color = color.white)
+bearishOutSignalPercentPlot = hline(bearishOutSignalPercent, title = 'FuzzFy Logic bearishOutSignalPercent', color = color.white)
 hline(0, title = 'Fuzzy Logic Zero', color = color.white)
-bullishOutSignalPercentPlot = hline(bullishOutSignalPercent, title = 'uzzFy Logic bullishOutSignalPercent', color = color.white)
-fill(bearishOutSignalPercentPlot, bullishOutSignalPercentPlot, color=fillColor, fillgaps=true)
+bullishOutSignalPercentPlot = hline(bullishOutSignalPercent, title = 'FuzzFy Logic bullishOutSignalPercent', color = color.white)
+fillFuzzyLogicColor = bullishWeightPercentage <= bullishOutSignalPercent ? color.new(colorShort, 60) : bearishWeightPercentage >= bearishOutSignalPercent ? color.new(colorLong, 60) : color.new(color.black, 100)
+fill(bearishOutSignalPercentPlot, bullishOutSignalPercentPlot, color=fillFuzzyLogicColor, fillgaps=true)
 
 hline(bearishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorShort)
 hline(-100, title = 'Fuzzy Logic Minimum', color = color.new(color.white, 70))
 plot(bullishWeightPercentage, title = 'Bullish Weight Percentage', color = colorLong, linewidth = 1, force_overlay = false)
 plot(bearishWeightPercentage, title = 'Bearish Weight Percentage', color = colorShort, linewidth = 1, force_overlay = false)
-
-
-//plot(ponderatedWeightPercentage, title = 'Ponderated Weight Percentage', color = color.white, linewidth = 1, force_overlay = false)
