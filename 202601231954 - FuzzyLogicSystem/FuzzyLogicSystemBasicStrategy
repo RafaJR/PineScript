@@ -43,26 +43,26 @@ posNegPressureWeight = input.float(title = 'posNegPressureWeight', defval = 0, m
 trendBarWeight = input.float(title = 'isBullishTrendBarWeight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 MACDHistogramCrossWeight = input.float(title = 'MACDHistogramCrossWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 FastMACDHistogramCrossWeight = input.float(title = 'FastMACDHistogramCrossWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-TopDogMomOverDadWeight = input.float(title = 'TopDogMomOverDadWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+TopDogMomOverDadWeight = input.float(title = 'TopDogMomOverDadWeight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 TopDogDadDirectionWeight = input.float(title = 'TopDogDadDirectionWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 RSISigCrossWeight = input.float(title = 'RSISigCrossWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-RSI5Above50Weight = input.float(title = 'RSI5Above50Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-RSI13Above50Weight = input.float(title = 'RSI13Above50Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+RSI5Above50Weight = input.float(title = 'RSI5Above50Weight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+RSI13Above50Weight = input.float(title = 'RSI13Above50Weight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 colorvalueWeight = input.float(title = 'colorvalueWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-MACrossover1Weight = input.float(title = 'MACrossover1Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+MACrossover1Weight = input.float(title = 'MACrossover1Weight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 trendBar4Weight = input.float(title = 'trendBar4Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-trendBar5Weight = input.float(title = 'trendBar5Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+trendBar5Weight = input.float(title = 'trendBar5Weight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 maWeight = input.float(title = 'maWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-volatilityWeight = input.float(title = 'isVolatilityBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+volatilityWeight = input.float(title = 'volatilityWeight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 
 // Percentual singnals
-bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 70, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-bullishOutSignalPercent = input.float(title = 'bullishOutSignalPercent', defval = 12, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -70, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
-bearishOutSignalPercent = input.float(title = 'bearishOutSignalPercent', defval = -12, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
+bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 95, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+bullishOutSignalPercent = input.float(title = 'bullishOutSignalPercent', defval = 5, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -95, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
+bearishOutSignalPercent = input.float(title = 'bearishOutSignalPercent', defval = -5, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
 
 // StopLoss / TakeProffit percents
-stopLossPercent = input.float(defval=100, title="Porcentaje de Stop Loss (%)", group="Risk control", step=0.1)
+stopLossPercent = input.float(defval=13, title="Porcentaje de Stop Loss (%)", group="Risk control", step=0.1)
 
 //********************************************************************************************************************************************************************************************************************
 // On fire booleans (true=green / false=red)
@@ -444,7 +444,7 @@ var bool operationalBusy = false
 
 // Entry conditions
 longEntry := ta.crossover(bullishWeightPercentage, bullishSignalPercent)
-killLongEntry :=  bullishWeightPercentage <= bullishOutSignalPercent
+killLongEntry := bullishWeightPercentage <= bullishOutSignalPercent
 shortEntry := ta.crossunder(bearishWeightPercentage, bearishSignalPercent)
 killShortEntry := bearishWeightPercentage >= bearishOutSignalPercent
 
