@@ -39,10 +39,8 @@ slowEmaPeriod = input.int(200, title="Slow EMA", minval=1, step=10, inline="Slow
 volLenght = input.int(defval = 100, title = 'Length', minval = 1, step = 1, group = 'Volatility')
 
 // Fuzzy logic Inputs
-isPosNegPressureBullishWeight = input.float(title = 'isPosNegPressureBullishWeight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-isPosNegPressureBearishWeight = input.float(title = 'isPosNegPressureBearish', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-isBullishTrendBarWeight = input.float(title = 'isBullishTrendBarWeight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-isBearishTrendBarWeight = input.float(title = 'isBearishTrendBarWeight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+posNegPressureWeight = input.float(title = 'posNegPressureWeight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+trendBarWeight = input.float(title = 'isBullishTrendBarWeight', defval = 0, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 MACDHistogramCrossWeight = input.float(title = 'MACDHistogramCrossWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 FastMACDHistogramCrossWeight = input.float(title = 'FastMACDHistogramCrossWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 TopDogMomOverDadWeight = input.float(title = 'TopDogMomOverDadWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
@@ -52,15 +50,12 @@ RSI5Above50Weight = input.float(title = 'RSI5Above50Weight', defval = 1, minval 
 RSI13Above50Weight = input.float(title = 'RSI13Above50Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 colorvalueWeight = input.float(title = 'colorvalueWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 MACrossover1Weight = input.float(title = 'MACrossover1Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-isBullishTrendBar4Weight = input.float(title = 'isBullishTrendBar4Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-isBearishTrendBar4Weight = input.float(title = 'isBearishTrendBar4Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-isBullishTrendBar5Weight = input.float(title = 'isBullishTrendBar5Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-isBearishTrendBar5Weight = input.float(title = 'isBearishTrendBar5Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-isMaBullishWeight = input.float(title = 'isMaBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-isMaBearishWeight = input.float(title = 'isMaBearishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-isVolatilityBullishWeight = input.float(title = 'isVolatilityBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-isVolatilityBearishWeight = input.float(title = 'isVolatilityBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+trendBar4Weight = input.float(title = 'trendBar4Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+trendBar5Weight = input.float(title = 'trendBar5Weight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+maWeight = input.float(title = 'maWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+volatilityWeight = input.float(title = 'isVolatilityBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 
+// Percentual singnals
 bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 70, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 bullishOutSignalPercent = input.float(title = 'bullishOutSignalPercent', defval = 12, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -60, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
@@ -352,34 +347,28 @@ isVolatilityBearish = spike < lowerLine
 //******************************************************************************************************************************************************
 // Fuzzy logic calculations
 //******************************************************************************************************************************************************
-totalWeight = isPosNegPressureBullishWeight + isPosNegPressureBearishWeight + isBullishTrendBarWeight + isBearishTrendBarWeight + MACDHistogramCrossWeight + FastMACDHistogramCrossWeight + TopDogMomOverDadWeight + TopDogDadDirectionWeight + RSISigCrossWeight + RSI5Above50Weight + RSI13Above50Weight + colorvalueWeight + MACrossover1Weight + isBullishTrendBar4Weight + isBearishTrendBar4Weight + isBullishTrendBar5Weight + isBearishTrendBar5Weight + isMaBullishWeight + isMaBearishWeight + isVolatilityBullishWeight + isVolatilityBearishWeight
+totalWeight = posNegPressureWeight + trendBarWeight + MACDHistogramCrossWeight + FastMACDHistogramCrossWeight + TopDogMomOverDadWeight + TopDogDadDirectionWeight + RSISigCrossWeight + RSI5Above50Weight + RSI13Above50Weight + colorvalueWeight + MACrossover1Weight + trendBar4Weight + trendBar4Weight + trendBar5Weight + maWeight + volatilityWeight
+int percent = 100
+posNegPressureWeight := posNegPressureWeight / totalWeight * percent
+trendBarWeight := trendBarWeight / totalWeight * percent
+MACDHistogramCrossWeight := MACDHistogramCrossWeight / totalWeight * percent
+FastMACDHistogramCrossWeight := FastMACDHistogramCrossWeight / totalWeight * percent
+TopDogMomOverDadWeight := TopDogMomOverDadWeight / totalWeight * percent
+TopDogDadDirectionWeight := TopDogDadDirectionWeight / totalWeight * percent
+RSISigCrossWeight := RSISigCrossWeight / totalWeight * percent
+RSI5Above50Weight := RSI5Above50Weight / totalWeight * percent
+RSI13Above50Weight := RSI13Above50Weight / totalWeight * percent
+colorvalueWeight := colorvalueWeight / totalWeight * percent
+MACrossover1Weight := MACrossover1Weight / totalWeight * percent
+trendBar4Weight := trendBar4Weight / totalWeight * percent
+trendBar5Weight := trendBar5Weight / totalWeight * percent
+maWeight := maWeight / totalWeight * percent
+volatilityWeight := volatilityWeight / totalWeight * percent
 
-isPosNegPressureBullishWeight := totalWeight > 0 ? isPosNegPressureBullishWeight / totalWeight * 100 : 0
-isPosNegPressureBearishWeight := totalWeight > 0 ? isPosNegPressureBearishWeight / totalWeight * 100 : 0
-isBullishTrendBarWeight := totalWeight > 0 ? isBullishTrendBarWeight / totalWeight * 100 : 0
-isBearishTrendBarWeight := totalWeight > 0 ? isBearishTrendBarWeight / totalWeight * 100 : 0
-MACDHistogramCrossWeight := totalWeight > 0 ? MACDHistogramCrossWeight / totalWeight * 100 : 0
-FastMACDHistogramCrossWeight := totalWeight > 0 ? FastMACDHistogramCrossWeight / totalWeight * 100 : 0
-TopDogMomOverDadWeight := totalWeight > 0 ? TopDogMomOverDadWeight / totalWeight * 100 : 0
-TopDogDadDirectionWeight := totalWeight > 0 ? TopDogDadDirectionWeight / totalWeight * 100 : 0
-RSISigCrossWeight := totalWeight > 0 ? RSISigCrossWeight / totalWeight * 100 : 0
-RSI5Above50Weight := totalWeight > 0 ? RSI5Above50Weight / totalWeight * 100 : 0
-RSI13Above50Weight := totalWeight > 0 ? RSI13Above50Weight / totalWeight * 100 : 0
-colorvalueWeight := totalWeight > 0 ? colorvalueWeight / totalWeight * 100 : 0
-MACrossover1Weight := totalWeight > 0 ? MACrossover1Weight / totalWeight * 100 : 0
-isBullishTrendBar4Weight := totalWeight > 0 ? isBullishTrendBar4Weight / totalWeight * 100 : 0
-isBearishTrendBar4Weight := totalWeight > 0 ? isBearishTrendBar4Weight / totalWeight * 100 : 0
-isBullishTrendBar5Weight := totalWeight > 0 ? isBullishTrendBar5Weight / totalWeight * 100 : 0
-isBearishTrendBar5Weight := totalWeight > 0 ? isBearishTrendBar5Weight / totalWeight * 100 : 0
-isMaBullishWeight := totalWeight > 0 ? isMaBullishWeight / totalWeight * 100 : 0
-isMaBearishWeight := totalWeight > 0 ? isMaBearishWeight / totalWeight * 100 : 0
-isVolatilityBullishWeight := totalWeight > 0 ? isVolatilityBullishWeight / totalWeight * 100 : 0
-isVolatilityBearishWeight := totalWeight > 0 ? isVolatilityBearishWeight / totalWeight * 100 : 0
+bullishWeightPercentage = (isPosNegPressureBullish ? posNegPressureWeight : 0)  + (isBullishTrendBar ? trendBarWeight : 0) + (MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (RSISigCross ? RSISigCrossWeight : 0) + (not colorvalue ? colorvalueWeight: 0) + (RSI5Above50 ? RSI5Above50Weight : 0) + (RSI13Above50 ? RSI13Above50Weight : 0) + (MACrossover1 ? MACrossover1Weight : 0) + (isBullishTrendBar4 ? trendBar4Weight : 0) + (isBullishTrendBar5 ? trendBar5Weight : 0) + (isMaBullish ? maWeight : 0) + (isVolatilityBullish ? volatilityWeight : 0)
+bearishWeightPercentage = (isPosNegPressureBearish ? posNegPressureWeight *-1 : 0) + (isBearishTrendBar ? trendBarWeight *-1 : 0) + (not MACDHistogramCross ? MACDHistogramCrossWeight *-1 : 0) + (not FastMACDHistogramCross ? FastMACDHistogramCrossWeight *-1 : 0) + (not TopDogMomOverDad ? TopDogMomOverDadWeight *-1 : 0) + (not TopDogDadDirection ? TopDogDadDirectionWeight *-1 : 0) + (not RSISigCross ? RSISigCrossWeight *-1: 0) + (not colorvalue ? colorvalueWeight *-1: 0) + (not RSI5Above50 ? RSI5Above50Weight *-1: 0) + (not RSI13Above50 ? RSI13Above50Weight *-1 : 0) + (not MACrossover1 ? MACrossover1Weight *-1 : 0) + (isBearishTrendBar4 ? trendBar4Weight *-1 : 0) + (isBearishTrendBar5 ? trendBar5Weight *-1 : 0) + (isMaBearish ? maWeight *-1 : 0) + (isVolatilityBearish ? volatilityWeight *-1 : 0)
 
-bullishWeightPercentage = (isPosNegPressureBullish ? isPosNegPressureBullishWeight : 0) + (isPosNegPressureBearish ? isPosNegPressureBearishWeight : 0) + (isBullishTrendBar ? isBullishTrendBarWeight : 0) + (isBearishTrendBar ? isBearishTrendBarWeight : 0) + (MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (RSISigCross ? RSISigCrossWeight : 0) + (RSI5Above50 ? RSI5Above50Weight : 0) + (RSI13Above50 ? RSI13Above50Weight : 0) + (MACrossover1 ? MACrossover1Weight : 0) + (isBullishTrendBar4 ? isBullishTrendBar4Weight : 0) + (isBearishTrendBar4 ? isBearishTrendBar4Weight : 0) + (isBullishTrendBar5 ? isBullishTrendBar5Weight : 0) + (isBearishTrendBar5 ? isBearishTrendBar5Weight : 0) + (isMaBullish ? isMaBullishWeight : 0) + (isVolatilityBullish ? isVolatilityBullishWeight : 0)
-bearishWeightPercentage = (not isPosNegPressureBullish ? isPosNegPressureBullishWeight : 0) + (not isPosNegPressureBearish ? isPosNegPressureBearishWeight : 0) + (not isBullishTrendBar ? isBullishTrendBarWeight : 0) + (not isBearishTrendBar ? isBearishTrendBarWeight : 0) + (not MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (not FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (not TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (not TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (not RSISigCross ? RSISigCrossWeight : 0) + (not RSI5Above50 ? RSI5Above50Weight : 0) + (not RSI13Above50 ? RSI13Above50Weight : 0) + (not MACrossover1 ? MACrossover1Weight : 0) + (not isBullishTrendBar4 ? isBullishTrendBar4Weight : 0) + (not isBearishTrendBar4 ? isBearishTrendBar4Weight : 0) + (not isBullishTrendBar5 ? isBullishTrendBar5Weight : 0) + (not isBearishTrendBar5 ? isBearishTrendBar5Weight : 0) + (isMaBearish ? isMaBearishWeight : 0) + (isVolatilityBearish ? isVolatilityBearishWeight : 0)
-
-bearishWeightPercentage := bearishWeightPercentage * -1
+//bearishWeightPercentage := bearishWeightPercentage * -1
 
 //******************************************************************************************************************************************************
 // Plotting
