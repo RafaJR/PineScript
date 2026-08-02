@@ -365,7 +365,7 @@ trendBar5Weight := trendBar5Weight / totalWeight * percent
 maWeight := maWeight / totalWeight * percent
 volatilityWeight := volatilityWeight / totalWeight * percent
 
-bullishWeightPercentage = (isPosNegPressureBullish ? posNegPressureWeight : 0)  + (isBullishTrendBar ? trendBarWeight : 0) + (MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (RSISigCross ? RSISigCrossWeight : 0) + (not colorvalue ? colorvalueWeight: 0) + (RSI5Above50 ? RSI5Above50Weight : 0) + (RSI13Above50 ? RSI13Above50Weight : 0) + (MACrossover1 ? MACrossover1Weight : 0) + (isBullishTrendBar4 ? trendBar4Weight : 0) + (isBullishTrendBar5 ? trendBar5Weight : 0) + (isMaBullish ? maWeight : 0) + (isVolatilityBullish ? volatilityWeight : 0)
+bullishWeightPercentage = (isPosNegPressureBullish ? posNegPressureWeight : 0)  + (isBullishTrendBar ? trendBarWeight : 0) + (MACDHistogramCross ? MACDHistogramCrossWeight : 0) + (FastMACDHistogramCross ? FastMACDHistogramCrossWeight : 0) + (TopDogMomOverDad ? TopDogMomOverDadWeight : 0) + (TopDogDadDirection ? TopDogDadDirectionWeight : 0) + (RSISigCross ? RSISigCrossWeight : 0) + (colorvalue ? colorvalueWeight: 0) + (RSI5Above50 ? RSI5Above50Weight : 0) + (RSI13Above50 ? RSI13Above50Weight : 0) + (MACrossover1 ? MACrossover1Weight : 0) + (isBullishTrendBar4 ? trendBar4Weight : 0) + (isBullishTrendBar5 ? trendBar5Weight : 0) + (isMaBullish ? maWeight : 0) + (isVolatilityBullish ? volatilityWeight : 0)
 bearishWeightPercentage = (isPosNegPressureBearish ? posNegPressureWeight *-1 : 0) + (isBearishTrendBar ? trendBarWeight *-1 : 0) + (not MACDHistogramCross ? MACDHistogramCrossWeight *-1 : 0) + (not FastMACDHistogramCross ? FastMACDHistogramCrossWeight *-1 : 0) + (not TopDogMomOverDad ? TopDogMomOverDadWeight *-1 : 0) + (not TopDogDadDirection ? TopDogDadDirectionWeight *-1 : 0) + (not RSISigCross ? RSISigCrossWeight *-1: 0) + (not colorvalue ? colorvalueWeight *-1: 0) + (not RSI5Above50 ? RSI5Above50Weight *-1: 0) + (not RSI13Above50 ? RSI13Above50Weight *-1 : 0) + (not MACrossover1 ? MACrossover1Weight *-1 : 0) + (isBearishTrendBar4 ? trendBar4Weight *-1 : 0) + (isBearishTrendBar5 ? trendBar5Weight *-1 : 0) + (isMaBearish ? maWeight *-1 : 0) + (isVolatilityBearish ? volatilityWeight *-1 : 0)
 
 //bearishWeightPercentage := bearishWeightPercentage * -1
@@ -400,15 +400,24 @@ fill(maSourceFastPlot, maSourceSlowPlot, color=fillMAColor, fillgaps=true)
 
 // Fuzzy logic oscilator
 hline(100, title = 'Fuzzy Logic Maximum', color = color.new(color.white, 70))
-hline(bullishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorLong)
+bullishSignalPercentPlot = plot(bullishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorLong)
 // Out zone
-bearishOutSignalPercentPlot = hline(bearishOutSignalPercent, title = 'FuzzFy Logic bearishOutSignalPercent', color = color.white)
+bearishOutSignalPercentPlot = plot(bearishOutSignalPercent, title = 'FuzzFy Logic bearishOutSignalPercent', color = color.white)
 hline(0, title = 'Fuzzy Logic Zero', color = color.white)
-bullishOutSignalPercentPlot = hline(bullishOutSignalPercent, title = 'FuzzFy Logic bullishOutSignalPercent', color = color.white)
-fillFuzzyLogicColor = bullishWeightPercentage <= bullishOutSignalPercent ? color.new(colorShort, 60) : bearishWeightPercentage >= bearishOutSignalPercent ? color.new(colorLong, 60) : color.new(color.black, 100)
-fill(bearishOutSignalPercentPlot, bullishOutSignalPercentPlot, color=fillFuzzyLogicColor, fillgaps=true)
+bullishOutSignalPercentPlot = plot(bullishOutSignalPercent, title = 'FuzzFy Logic bullishOutSignalPercent', color = color.white)
 
-hline(bearishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorShort)
+bearishSignalPercentPlot = plot(bearishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorShort)
 hline(-100, title = 'Fuzzy Logic Minimum', color = color.new(color.white, 70))
-plot(bullishWeightPercentage, title = 'Bullish Weight Percentage', color = colorLong, linewidth = 1, force_overlay = false)
-plot(bearishWeightPercentage, title = 'Bearish Weight Percentage', color = colorShort, linewidth = 1, force_overlay = false)
+bullishWeightPercentagePlot = plot(bullishWeightPercentage, title = 'Bullish Weight Percentage', color = colorLong, linewidth = 1, force_overlay = false)
+bearishWeightPercentagePlot = plot(bearishWeightPercentage, title = 'Bearish Weight Percentage', color = colorShort, linewidth = 1, force_overlay = false)
+fillFuzzyBullishColor = bullishWeightPercentage >= bullishSignalPercent ? color.new(colorLong, 60) : color.new(color.black, 100)
+fillFuzzyBearishColor = bearishWeightPercentage <= bearishSignalPercent ? color.new(colorShort, 60) : color.new(color.black, 100)
+//fill(bearishOutSignalPercentPlot, bullishOutSignalPercentPlot, color=fillMAColor, fillgaps=true)
+fill(bullishWeightPercentagePlot, bullishSignalPercentPlot, color=fillFuzzyBullishColor, fillgaps=true)
+fill(bearishWeightPercentagePlot, bearishSignalPercentPlot, color=fillFuzzyBearishColor, fillgaps=true)
+
+fill(bearishOutSignalPercentPlot, bullishOutSignalPercentPlot, color=color.new(color.white, 90), fillgaps=true)
+fillFuzzyOutBullishColor = bullishWeightPercentage <= bullishOutSignalPercent ? color.new(colorShort, 60) : color.new(color.black, 100)
+fill(bullishWeightPercentagePlot, bullishOutSignalPercentPlot, color=fillFuzzyOutBullishColor, fillgaps=true)
+fillFuzzyOutBearishColor = bearishWeightPercentage >= bearishOutSignalPercent ? color.new(colorLong, 60) : color.new(color.black, 100)
+fill(bearishWeightPercentagePlot, bearishOutSignalPercentPlot, color=fillFuzzyOutBearishColor, fillgaps=true)
