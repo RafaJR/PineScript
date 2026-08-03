@@ -1,0 +1,170 @@
+//@version=6
+strategy(title = 'Fuzzy Logic System Basic Strategy', shorttitle = 'FuzzyLogicSystemBasicStrategy2', overlay = true, pyramiding = 0, calc_on_order_fills = false, commission_type = strategy.commission.percent, commission_value = 0.25, default_qty_type = strategy.percent_of_equity, default_qty_value = 95, initial_capital = 100, currency = currency.USD,  margin_long = 100,  margin_short = 100)
+
+//******************************************************************************************************************************************************
+// Configuration inputs
+//******************************************************************************************************************************************************
+// Averange calculation parameters
+maType = input.string("VWMA", "Basis MA Type", options = ["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="Averange")
+fastEmaPeriod = input.int(50, title="Fast EMA", minval=1, step=10, inline="Fast EMA", group="EMAs")
+slowEmaPeriod = input.int(200, title="Slow EMA", minval=1, step=10, inline="Slow EMA", group="EMAs")
+
+// Data source Configuration
+DataSource = input.source(defval = close, title="Prize data source", group="General configuration")
+
+// Fuzzy logic weight inputs
+maWeight = input.float(title = 'maWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+volatilityWeight = input.float(title = 'isVolatilityBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+
+// Percentual singnals
+bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 70, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+bullishOutSignalPercent = input.float(title = 'bullishOutSignalPercent', defval = 12, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -60, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
+bearishOutSignalPercent = input.float(title = 'bearishOutSignalPercent', defval = -12, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
+
+// StopLoss / TakeProffit percents
+stopLossPercent = input.float(defval=13, title="Porcentaje de Stop Loss (%)", group="Risk control", step=0.1)
+
+// colors
+colorLong = #95d697 // Green for bullish movements
+colorShort = #eb805c // Red for bearish movements
+colorNeutral = #9e9e9e5c // Grey color for ?
+//******************************************************************************************************************************************************
+// Main indicators calculations
+//******************************************************************************************************************************************************
+// MAs calculations
+// Setting de MAS type
+maSource(float source, int length, simple string maType) =>
+    switch maType
+        "SMA" => ta.sma(DataSource, length)
+        "EMA" => ta.ema(DataSource, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+
+maFastSource = maSource(DataSource, fastEmaPeriod, maType)
+maSlowSource = maSource(DataSource, slowEmaPeriod, maType)
+
+isMaBearish = maSlowSource > maFastSource
+isMaBullish = maSlowSource < maFastSource
+
+//******************************************************************************************************************************************************
+// Fuzzy logic calculations
+//******************************************************************************************************************************************************
+totalWeight = maWeight
+int percent = 100
+maWeight := maWeight / totalWeight * percent
+volatilityWeight := volatilityWeight / totalWeight * percent
+
+bullishWeightPercentage = (isMaBullish ? maWeight : 0)
+bearishWeightPercentage = (isMaBearish ? maWeight : 0)
+
+bearishWeightPercentage := bearishWeightPercentage * -1
+
+//******************************************************************************************************************************************************
+// Plotting
+//******************************************************************************************************************************************************
+// EMAs Plotting
+maSourceSlowColor = maSlowSource < DataSource ? colorLong : colorShort
+maSourceFastColor = maFastSource < DataSource ? colorLong : colorShort
+maSourceSlowPlot = plot(series=maSlowSource, title="maSource", color=maSourceSlowColor, linewidth = 2, force_overlay = true)
+maSourceFastPlot = plot(series=maFastSource, title="maSource", color=maSourceFastColor, linewidth = 1, force_overlay = true)
+
+fillMAColor = isMaBearish ? color.new(colorShort, 80) : color.new(colorLong, 80)
+fill(maSourceFastPlot, maSourceSlowPlot, color=fillMAColor, fillgaps=true)
+
+// Fuzzy logic oscilator
+hline(100, title = 'Fuzzy Logic Maximum', color = color.new(color.white, 70))
+bullishSignalPercentPlot = plot(bullishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorLong)
+// Out zone
+bearishOutSignalPercentPlot = plot(bearishOutSignalPercent, title = 'FuzzFy Logic bearishOutSignalPercent', color = color.white)
+hline(0, title = 'Fuzzy Logic Zero', color = color.white)
+bullishOutSignalPercentPlot = plot(bullishOutSignalPercent, title = 'FuzzFy Logic bullishOutSignalPercent', color = color.white)
+
+bearishSignalPercentPlot = plot(bearishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorShort)
+hline(-100, title = 'Fuzzy Logic Minimum', color = color.new(color.white, 70))
+bullishWeightPercentagePlot = plot(bullishWeightPercentage, title = 'Bullish Weight Percentage', color = colorLong, linewidth = 1, force_overlay = false)
+bearishWeightPercentagePlot = plot(bearishWeightPercentage, title = 'Bearish Weight Percentage', color = colorShort, linewidth = 1, force_overlay = false)
+fillFuzzyBullishColor = bullishWeightPercentage >= bullishSignalPercent ? color.new(colorLong, 60) : color.new(color.black, 100)
+fillFuzzyBearishColor = bearishWeightPercentage <= bearishSignalPercent ? color.new(colorShort, 60) : color.new(color.black, 100)
+//fill(bearishOutSignalPercentPlot, bullishOutSignalPercentPlot, color=fillMAColor, fillgaps=true)
+fill(bullishWeightPercentagePlot, bullishSignalPercentPlot, color=fillFuzzyBullishColor, fillgaps=true)
+fill(bearishWeightPercentagePlot, bearishSignalPercentPlot, color=fillFuzzyBearishColor, fillgaps=true)
+
+fill(bearishOutSignalPercentPlot, bullishOutSignalPercentPlot, color=color.new(color.white, 90), fillgaps=true)
+fillFuzzyOutBullishColor = bullishWeightPercentage <= bullishOutSignalPercent ? color.new(colorShort, 60) : color.new(color.black, 100)
+fill(bullishWeightPercentagePlot, bullishOutSignalPercentPlot, color=fillFuzzyOutBullishColor, fillgaps=true)
+fillFuzzyOutBearishColor = bearishWeightPercentage >= bearishOutSignalPercent ? color.new(colorLong, 60) : color.new(color.black, 100)
+fill(bearishWeightPercentagePlot, bearishOutSignalPercentPlot, color=fillFuzzyOutBearishColor, fillgaps=true)
+
+//***************************************************************************************************************************************************************
+// Operation orders
+//***************************************************************************************************************************************************************
+// Entry vars inicialization
+var bool killLongEntry = false
+var bool killShortEntry = false
+var bool longEntry = false
+var bool shortEntry = false
+var bool operationalBusy = false
+
+//bullishWeightPercentage
+//bearishWeightPercentage
+//bullishSignalPercent
+//bullishOutSignalPercent
+//bearishSignalPercent
+//bearishOutSignalPercent
+
+// Entry conditions
+longEntry := ta.crossover(bullishWeightPercentage, bullishSignalPercent)
+killLongEntry := bullishWeightPercentage <= bullishOutSignalPercent
+shortEntry := ta.crossunder(bearishWeightPercentage, bearishSignalPercent)
+killShortEntry := bearishWeightPercentage >= bearishOutSignalPercent
+
+// Time parameters for testing
+//if (year == 2025 and month == 1 and dayofmonth >= 6 and dayofmonth <= 7)
+//if (year == currentYear and month == currentMonth)
+//if (year == currentYear)
+if (true)
+    // Operation nomenclature variables
+    var int longOpCount = 0
+    var int shortOpCount = 0
+    var string longOpName = ""
+    var string shortOpName = ""
+
+    if(killLongEntry)
+        strategy.close(id=longOpName)
+        operationalBusy := false
+    if(killShortEntry)
+        strategy.close(id=shortOpName)
+        operationalBusy := false
+    if (longEntry and not operationalBusy)
+        longOpCount += 1
+        longOpName := "Long"
+        longOpComment = longOpName + str.tostring(longOpCount)
+        strategy.entry(id=longOpName, direction=strategy.long, comment=longOpComment)
+        stopLossPrize = strategy.position_avg_price * (1 - stopLossPercent / 100)
+        strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, comment_profit = "TP" + str.tostring(longOpCount), comment_loss = "SL" + str.tostring(longOpCount))
+        operationalBusy := true
+    if (shortEntry and not operationalBusy)
+        shortOpCount += 1
+        shortOpName := "Short"
+        shortOpComment = shortOpName + str.tostring(shortOpCount)
+        strategy.entry(id=shortOpName, direction=strategy.short, comment=shortOpComment)
+        stopLossPrize = strategy.position_avg_price * (1 + stopLossPercent / 100)
+        strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, comment_profit = "TP" + str.tostring(shortOpCount), comment_loss = "SL" + str.tostring(longOpCount))
+        operationalBusy := true
+    if (strategy.position_size == 0)
+        operationalBusy := false
+    // Stop Loss update
+    //if (operationalBusy)
+    //    bool isLongActive = strategy.position_size > 0
+    //    bool isShortActive = strategy.position_size < 0
+
+    //    if (isLongActive and sarBecomeBullish)
+    //        strategy.exit(id=longOpName, from_entry=longOpName, stop=currentLowest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+    //    if (isShortActive and sarBecomeBearish)
+    //        strategy.exit(id=shortOpName, from_entry=shortOpName, stop=currentHighest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+    //    if (isLongActive and not longEntrySustainable)
+    //        strategy.exit(id=longOpName, from_entry=longOpName, profit=currentHighest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
+    //    if (isShortActive and not shortEntrySustainable)
+    //

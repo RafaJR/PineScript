@@ -1,0 +1,95 @@
+//@version=6
+indicator(title = 'Fuzzy Logic Oscilator 2')
+
+//******************************************************************************************************************************************************
+// Configuration inputs
+//******************************************************************************************************************************************************
+// Averange calculation parameters
+maType = input.string("VWMA", "Basis MA Type", options = ["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="Averange")
+fastEmaPeriod = input.int(50, title="Fast EMA", minval=1, step=10, inline="Fast EMA", group="EMAs")
+slowEmaPeriod = input.int(200, title="Slow EMA", minval=1, step=10, inline="Slow EMA", group="EMAs")
+
+// Data source Configuration
+DataSource = input.source(defval = close, title="Prize data source", group="General configuration")
+
+// Fuzzy logic weight inputs
+maWeight = input.float(title = 'maWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+volatilityWeight = input.float(title = 'isVolatilityBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+
+// Percentual singnals
+bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 70, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+bullishOutSignalPercent = input.float(title = 'bullishOutSignalPercent', defval = 12, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -60, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
+bearishOutSignalPercent = input.float(title = 'bearishOutSignalPercent', defval = -12, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
+
+// colors
+colorLong = #95d697 // Green for bullish movements
+colorShort = #eb805c // Red for bearish movements
+colorNeutral = #9e9e9e5c // Grey color for ?
+//******************************************************************************************************************************************************
+// Main indicators calculations
+//******************************************************************************************************************************************************
+// MAs calculations
+// Setting de MAS type
+maSource(float source, int length, simple string maType) =>
+    switch maType
+        "SMA" => ta.sma(DataSource, length)
+        "EMA" => ta.ema(DataSource, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+
+maFastSource = maSource(DataSource, fastEmaPeriod, maType)
+maSlowSource = maSource(DataSource, slowEmaPeriod, maType)
+
+isMaBearish = maSlowSource > maFastSource
+isMaBullish = maSlowSource < maFastSource
+
+//******************************************************************************************************************************************************
+// Fuzzy logic calculations
+//******************************************************************************************************************************************************
+totalWeight = maWeight
+int percent = 100
+maWeight := maWeight / totalWeight * percent
+volatilityWeight := volatilityWeight / totalWeight * percent
+
+bullishWeightPercentage = (isMaBullish ? maWeight : 0)
+bearishWeightPercentage = (isMaBearish ? maWeight : 0)
+
+bearishWeightPercentage := bearishWeightPercentage * -1
+
+//******************************************************************************************************************************************************
+// Plotting
+//******************************************************************************************************************************************************
+// EMAs Plotting
+maSourceSlowColor = maSlowSource < DataSource ? colorLong : colorShort
+maSourceFastColor = maFastSource < DataSource ? colorLong : colorShort
+maSourceSlowPlot = plot(series=maSlowSource, title="maSource", color=maSourceSlowColor, linewidth = 2, force_overlay = true)
+maSourceFastPlot = plot(series=maFastSource, title="maSource", color=maSourceFastColor, linewidth = 1, force_overlay = true)
+
+fillMAColor = isMaBearish ? color.new(colorShort, 80) : color.new(colorLong, 80)
+fill(maSourceFastPlot, maSourceSlowPlot, color=fillMAColor, fillgaps=true)
+
+// Fuzzy logic oscilator
+hline(100, title = 'Fuzzy Logic Maximum', color = color.new(color.white, 70))
+bullishSignalPercentPlot = plot(bullishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorLong)
+// Out zone
+bearishOutSignalPercentPlot = plot(bearishOutSignalPercent, title = 'FuzzFy Logic bearishOutSignalPercent', color = color.white)
+hline(0, title = 'Fuzzy Logic Zero', color = color.white)
+bullishOutSignalPercentPlot = plot(bullishOutSignalPercent, title = 'FuzzFy Logic bullishOutSignalPercent', color = color.white)
+
+bearishSignalPercentPlot = plot(bearishSignalPercent, title = 'Fuzzy Logic Maximum', color = colorShort)
+hline(-100, title = 'Fuzzy Logic Minimum', color = color.new(color.white, 70))
+bullishWeightPercentagePlot = plot(bullishWeightPercentage, title = 'Bullish Weight Percentage', color = colorLong, linewidth = 1, force_overlay = false)
+bearishWeightPercentagePlot = plot(bearishWeightPercentage, title = 'Bearish Weight Percentage', color = colorShort, linewidth = 1, force_overlay = false)
+fillFuzzyBullishColor = bullishWeightPercentage >= bullishSignalPercent ? color.new(colorLong, 60) : color.new(color.black, 100)
+fillFuzzyBearishColor = bearishWeightPercentage <= bearishSignalPercent ? color.new(colorShort, 60) : color.new(color.black, 100)
+//fill(bearishOutSignalPercentPlot, bullishOutSignalPercentPlot, color=fillMAColor, fillgaps=true)
+fill(bullishWeightPercentagePlot, bullishSignalPercentPlot, color=fillFuzzyBullishColor, fillgaps=true)
+fill(bearishWeightPercentagePlot, bearishSignalPercentPlot, color=fillFuzzyBearishColor, fillgaps=true)
+
+fill(bearishOutSignalPercentPlot, bullishOutSignalPercentPlot, color=color.new(color.white, 90), fillgaps=true)
+fillFuzzyOutBullishColor = bullishWeightPercentage <= bullishOutSignalPercent ? color.new(colorShort, 60) : color.new(color.black, 100)
+fill(bullishWeightPercentagePlot, bullishOutSignalPercentPlot, color=fillFuzzyOutBullishColor, fillgaps=true)
+fillFuzzyOutBearishColor = bearishWeightPercentage >= bearishOutSignalPercent ? color.new(colorLong, 60) : color.new(color.black, 100)
+fill(bearishWeightPercentagePlot, bearishOutSignalPercentPlot, color=fillFuzzyOutBearishColor, fillgaps=true)
