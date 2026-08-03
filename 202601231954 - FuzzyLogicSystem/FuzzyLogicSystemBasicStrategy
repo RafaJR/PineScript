@@ -495,4 +495,4 @@ if (true)
     //    if (isLongActive and not longEntrySustainable)
     //        strategy.exit(id=longOpName, from_entry=longOpName, profit=currentHighest, comment_profit = "DTP" + str.tostring(longOpCount), comment_loss = "DSL" + str.tostring(longOpCount))
     //    if (isShortActive and not shortEntrySustainable)
-    //  
+    //
