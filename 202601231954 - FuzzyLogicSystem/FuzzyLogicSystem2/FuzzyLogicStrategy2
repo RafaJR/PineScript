@@ -14,6 +14,9 @@ slowEmaPeriod = input.int(defval = 200, title = "Slow EMA", minval=1, step = 10,
 int fastMacdInput = input.int(defval = 12, title = 'Fast length', step = 1, group = 'MACD')
 int slowMacdInput = input.int(defval = 26, title = 'Slow length', step = 1, group = 'MACD')
 int sigLenInput = input.int(defval = 9, title = 'Signal length', step = 1, group = 'MACD')
+int adxDiLength = input.int(defval = 14, title = 'ADX DI length', step = 1, group = 'ADX')
+int adxSmoothing = input.int(defval = 14, title = 'ADX smoothing', step = 1, group = 'ADX')
+float adxTrendThreshold = input.float(defval = 25.0, title = 'ADX trend threshold', step = 0.1, group = 'ADX')
 
 // Data source Configuration
 DataSource = input.source(defval = close, title="Prize data source", group="General configuration")
@@ -65,9 +68,6 @@ isMacdBullish = macd > signal
 isMacdBearish = macd < signal
 
 // ADX calculation
-int adxDiLength = 14
-int adxSmoothing = 14
-float adxTrendThreshold = 25.0
 [positiveDi, negativeDi, adx] = ta.dmi(adxDiLength, adxSmoothing)
 
 bool isAdxBullish = adx >= adxTrendThreshold and positiveDi > negativeDi
