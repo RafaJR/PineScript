@@ -4,26 +4,29 @@ strategy(title = 'Fuzzy Logic System Basic Strategy', shorttitle = 'FuzzyLogicSy
 //******************************************************************************************************************************************************
 // Configuration inputs
 //******************************************************************************************************************************************************
-// Averange calculation parameters
-maType = input.string("VWMA", "Basis MA Type", options = ["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="Averange")
-fastEmaPeriod = input.int(50, title="Fast EMA", minval=1, step=10, inline="Fast EMA", group="EMAs")
-slowEmaPeriod = input.int(200, title="Slow EMA", minval=1, step=10, inline="Slow EMA", group="EMAs")
+
+// StopLoss / TakeProffit percents
+stopLossPercent = input.int(defval = 1, title = 'Porcentaje de Stop Loss (%)', group = 'Risk control', step = 1)
+
+maType = input.string(defval = "VWMA", title = "Basis MA Type", options = ["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="Averange")
+fastEmaPeriod = input.int(defval = 50, title = "Fast EMA", minval=1, step = 10, inline="Fast EMA", group="EMAs")
+slowEmaPeriod = input.int(defval = 200, title = "Slow EMA", minval=1, step = 10, inline="Slow EMA", group="EMAs")
+int fastMacdInput = input.int(defval = 12, title = 'Fast length', step = 1, group = 'MACD')
+int slowMacdInput = input.int(defval = 26, title = 'Slow length', step = 1, group = 'MACD')
+int sigLenInput = input.int(defval = 9, title = 'Signal length', step = 1, group = 'MACD')
 
 // Data source Configuration
 DataSource = input.source(defval = close, title="Prize data source", group="General configuration")
 
 // Fuzzy logic weight inputs
-maWeight = input.float(title = 'maWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-volatilityWeight = input.float(title = 'isVolatilityBullishWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+maWeight = input.float(title = 'maWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic weigth", step = 1)
+macdWeight = input.float(title = 'macdWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic weight", step = 1)
 
 // Percentual singnals
 bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 70, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 bullishOutSignalPercent = input.float(title = 'bullishOutSignalPercent', defval = 12, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -60, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
+bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -70, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
 bearishOutSignalPercent = input.float(title = 'bearishOutSignalPercent', defval = -12, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
-
-// StopLoss / TakeProffit percents
-stopLossPercent = input.float(defval=13, title="Porcentaje de Stop Loss (%)", group="Risk control", step=0.1)
 
 // colors
 colorLong = #95d697 // Green for bullish movements
@@ -42,22 +45,34 @@ maSource(float source, int length, simple string maType) =>
         "WMA" => ta.wma(source, length)
         "VWMA" => ta.vwma(source, length)
 
+// EMA calculation
 maFastSource = maSource(DataSource, fastEmaPeriod, maType)
 maSlowSource = maSource(DataSource, slowEmaPeriod, maType)
 
 isMaBearish = maSlowSource > maFastSource
 isMaBullish = maSlowSource < maFastSource
 
+// MACD calculation
+// Calculate and plot the MACD, signal, and histogram values.
+float maFast = maSource(DataSource, fastMacdInput, maType)
+float maSlow = maSource(DataSource, slowMacdInput, maType)
+float macd = maFast - maSlow
+float signal = maSource(macd, sigLenInput, maType)
+float hist = macd - signal
+
+isMacdBullish = macd > signal
+isMacdBearish = macd < signal
+
 //******************************************************************************************************************************************************
 // Fuzzy logic calculations
 //******************************************************************************************************************************************************
-totalWeight = maWeight
+totalWeight = maWeight + macdWeight
 int percent = 100
 maWeight := maWeight / totalWeight * percent
-volatilityWeight := volatilityWeight / totalWeight * percent
+macdWeight := macdWeight / totalWeight * percent
 
-bullishWeightPercentage = (isMaBullish ? maWeight : 0)
-bearishWeightPercentage = (isMaBearish ? maWeight : 0)
+bullishWeightPercentage = (isMaBullish ? maWeight : 0) + (isMacdBullish ? macdWeight : 0)
+bearishWeightPercentage = (isMaBearish ? maWeight : 0) + (isMacdBearish ? macdWeight : 0)
 
 bearishWeightPercentage := bearishWeightPercentage * -1
 
