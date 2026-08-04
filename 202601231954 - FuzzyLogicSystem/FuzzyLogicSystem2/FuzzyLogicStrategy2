@@ -17,14 +17,17 @@ int sigLenInput = input.int(defval = 9, title = 'Signal length', step = 1, group
 int adxDiLength = input.int(defval = 14, title = 'ADX DI length', step = 1, group = 'ADX')
 int adxSmoothing = input.int(defval = 14, title = 'ADX smoothing', step = 1, group = 'ADX')
 float adxTrendThreshold = input.float(defval = 25.0, title = 'ADX trend threshold', step = 0.1, group = 'ADX')
+int superTrendAtrLength = input.int(defval = 10, title = 'SuperTrend ATR length', minval = 1, step = 1, group = 'SuperTrend')
+float superTrendFactor = input.float(defval = 3.0, title = 'SuperTrend factor', minval = 0.1, step = 0.1, group = 'SuperTrend')
 
 // Data source Configuration
 DataSource = input.source(defval = close, title="Prize data source", group="General configuration")
 
 // Fuzzy logic weight inputs
 maWeight = input.float(title = 'maWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic weigth", step = 1)
-macdWeight = input.float(title = 'macdWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic weight", step = 1)
-adxWeight = input.float(title = 'adxWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic weight", step = 1)
+macdWeight = input.float(title = 'macdWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic weigth", step = 1)
+adxWeight = input.float(title = 'adxWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic weigth", step = 1)
+superTrendWeight = input.float(title = 'superTrendWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic weigth", step = 1)
 
 // Percentual singnals
 bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 90, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
@@ -73,17 +76,24 @@ isMacdBearish = macd < signal
 bool isAdxBullish = adx >= adxTrendThreshold and positiveDi > negativeDi
 bool isAdxBearish = adx >= adxTrendThreshold and negativeDi > positiveDi
 
+// SuperTrend calculation
+[superTrend, superTrendDirection] = ta.supertrend(superTrendFactor, superTrendAtrLength)
+
+bool isSuperTrendBullish = superTrendDirection < 0
+bool isSuperTrendBearish = superTrendDirection > 0
+
 //******************************************************************************************************************************************************
 // Fuzzy logic calculations
 //******************************************************************************************************************************************************
-totalWeight = maWeight + macdWeight + adxWeight
+totalWeight = maWeight + macdWeight + adxWeight + superTrendWeight
 int percent = 100
 maWeight := maWeight / totalWeight * percent
 macdWeight := macdWeight / totalWeight * percent
 adxWeight := adxWeight / totalWeight * percent
+superTrendWeight := superTrendWeight / totalWeight * percent
 
-bullishWeightPercentage = (isMaBullish ? maWeight : 0) + (isMacdBullish ? macdWeight : 0) + (isAdxBullish ? adxWeight : 0)
-bearishWeightPercentage = (isMaBearish ? maWeight : 0) + (isMacdBearish ? macdWeight : 0) + (isAdxBearish ? adxWeight : 0)
+bullishWeightPercentage = (isMaBullish ? maWeight : 0) + (isMacdBullish ? macdWeight : 0) + (isAdxBullish ? adxWeight : 0) + (isSuperTrendBullish ? superTrendWeight : 0)
+bearishWeightPercentage = (isMaBearish ? maWeight : 0) + (isMacdBearish ? macdWeight : 0) + (isAdxBearish ? adxWeight : 0) + (isSuperTrendBearish ? superTrendWeight : 0)
 
 bearishWeightPercentage := bearishWeightPercentage * -1
 
@@ -122,6 +132,7 @@ fillFuzzyOutBullishColor = bullishWeightPercentage <= bullishOutSignalPercent ? 
 fill(bullishWeightPercentagePlot, bullishOutSignalPercentPlot, color=fillFuzzyOutBullishColor, fillgaps=true)
 fillFuzzyOutBearishColor = bearishWeightPercentage >= bearishOutSignalPercent ? color.new(colorLong, 60) : color.new(color.black, 100)
 fill(bearishWeightPercentagePlot, bearishOutSignalPercentPlot, color=fillFuzzyOutBearishColor, fillgaps=true)
+
 
 //***************************************************************************************************************************************************************
 // Operation orders
