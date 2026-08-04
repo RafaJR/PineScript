@@ -18,12 +18,13 @@ DataSource = input.source(defval = close, title="Prize data source", group="Gene
 // Fuzzy logic weight inputs
 maWeight = input.float(title = 'maWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic weigth", step = 1)
 macdWeight = input.float(title = 'macdWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic weight", step = 1)
+adxWeight = input.float(title = 'adxWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic weight", step = 1)
 
 // Percentual singnals
-bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 70, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-bullishOutSignalPercent = input.float(title = 'bullishOutSignalPercent', defval = 12, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -70, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
-bearishOutSignalPercent = input.float(title = 'bearishOutSignalPercent', defval = -12, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
+bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 90, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+bullishOutSignalPercent = input.float(title = 'bullishOutSignalPercent', defval = 5, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
+bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -90, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
+bearishOutSignalPercent = input.float(title = 'bearishOutSignalPercent', defval = -5, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
 
 // colors
 colorLong = #95d697 // Green for bullish movements
@@ -60,16 +61,26 @@ float hist = macd - signal
 isMacdBullish = macd > signal
 isMacdBearish = macd < signal
 
+// ADX calculation
+int adxDiLength = 14
+int adxSmoothing = 14
+float adxTrendThreshold = 25.0
+[positiveDi, negativeDi, adx] = ta.dmi(adxDiLength, adxSmoothing)
+
+bool isAdxBullish = adx >= adxTrendThreshold and positiveDi > negativeDi
+bool isAdxBearish = adx >= adxTrendThreshold and negativeDi > positiveDi
+
 //******************************************************************************************************************************************************
 // Fuzzy logic calculations
 //******************************************************************************************************************************************************
-totalWeight = maWeight + macdWeight
+totalWeight = maWeight + macdWeight + adxWeight
 int percent = 100
 maWeight := maWeight / totalWeight * percent
 macdWeight := macdWeight / totalWeight * percent
+adxWeight := adxWeight / totalWeight * percent
 
-bullishWeightPercentage = (isMaBullish ? maWeight : 0) + (isMacdBullish ? macdWeight : 0)
-bearishWeightPercentage = (isMaBearish ? maWeight : 0) + (isMacdBearish ? macdWeight : 0)
+bullishWeightPercentage = (isMaBullish ? maWeight : 0) + (isMacdBullish ? macdWeight : 0) + (isAdxBullish ? adxWeight : 0)
+bearishWeightPercentage = (isMaBearish ? maWeight : 0) + (isMacdBearish ? macdWeight : 0) + (isAdxBearish ? adxWeight : 0)
 
 bearishWeightPercentage := bearishWeightPercentage * -1
 
