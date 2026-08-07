@@ -40,7 +40,7 @@ superTrendWeight = input.float(title = 'superTrendWeight', defval = defaultWeigh
 rsiWeight = input.float(title = 'rsiWeight', defval = nullWeight, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
 vwapWeight = input.float(title = 'vwapWeight', defval = nullWeight, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
 atrWeight  = input.float(title = 'atrWeight', defval = nullWeight, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
-bollingerBandsWeight = input.float(title = 'bollingerBandsWeight', defval = 13, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
+bollingerBandsWeight = input.float(title = 'bollingerBandsWeight', defval = defaultWeight, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
 
 // Percentual singnals
 bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 90, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
@@ -117,8 +117,8 @@ bool isAtrBearish = isAtrIncreasing and close < open
 // Bollinger Bands calculation
 [bollingerBandsBasis, bollingerBandsUpper, bollingerBandsLower] = ta.bb(DataSource, bollingerBandsLength, bollingerBandsMultiplier)
 
-bool isBollingerBandsBullish = DataSource <= bollingerBandsLower
-bool isBollingerBandsBearish = DataSource >= bollingerBandsUpper
+bool isBollingerBandsBullish = DataSource <= bollingerBandsLower or DataSource > bollingerBandsBasis
+bool isBollingerBandsBearish = DataSource >= bollingerBandsUpper or DataSource < bollingerBandsBasis
 
 //******************************************************************************************************************************************************
 // Fuzzy logic calculations
