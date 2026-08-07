@@ -24,6 +24,12 @@ float rsiOversoldLevel = input.float(defval = 30.0, title = 'RSI oversold level'
 int atrLength = input.int(defval = 14, title = 'ATR length', minval = 1, step = 1, group = 'ATR')
 int bollingerBandsLength = input.int(defval = 20, title = 'Bollinger Bands length', minval = 1, step = 1, group = 'Bollinger Bands')
 float bollingerBandsMultiplier = input.float(defval = 2.0, title = 'Bollinger Bands multiplier', minval = 0.1, step = 0.1, group = 'Bollinger Bands')
+int alligatorJawLength = input.int(defval = 13, title = 'Jaw length', minval = 1, step = 1, group = 'Williams Alligator')
+int alligatorJawOffset = input.int(defval = 8, title = 'Jaw offset', minval = 0, step = 1, group = 'Williams Alligator')
+int alligatorTeethLength = input.int(defval = 8, title = 'Teeth length', minval = 1, step = 1, group = 'Williams Alligator')
+int alligatorTeethOffset = input.int(defval = 5, title = 'Teeth offset', minval = 0, step = 1, group = 'Williams Alligator')
+int alligatorLipsLength = input.int(defval = 5, title = 'Lips length', minval = 1, step = 1, group = 'Williams Alligator')
+int alligatorLipsOffset = input.int(defval = 3, title = 'Lips offset', minval = 0, step = 1, group = 'Williams Alligator')
 
 // Data source Configuration
 DataSource = input.source(defval = hl2, title="Prize data source", group="General configuration")
@@ -41,6 +47,7 @@ rsiWeight = input.float(title = 'rsiWeight', defval = nullWeight, minval = nullW
 vwapWeight = input.float(title = 'vwapWeight', defval = nullWeight, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
 atrWeight  = input.float(title = 'atrWeight', defval = nullWeight, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
 bollingerBandsWeight = input.float(title = 'bollingerBandsWeight', defval = defaultWeight, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
+alligatorWeight = input.float(title = 'alligatorWeight', defval = defaultWeight, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
 
 // Percentual singnals
 bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 90, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
@@ -120,10 +127,18 @@ bool isAtrBearish = isAtrIncreasing and close < open
 bool isBollingerBandsBullish = DataSource <= bollingerBandsLower or DataSource > bollingerBandsBasis
 bool isBollingerBandsBearish = DataSource >= bollingerBandsUpper or DataSource < bollingerBandsBasis
 
+// Alligator calculation
+float alligatorJaw = ta.rma(DataSource, alligatorJawLength)
+float alligatorTeeth = ta.rma(DataSource, alligatorTeethLength)
+float alligatorLips = ta.rma(DataSource, alligatorLipsLength)
+
+bool isAlligatorBullish = alligatorLips[alligatorLipsOffset] > alligatorTeeth[alligatorTeethOffset] and alligatorTeeth[alligatorTeethOffset] > alligatorJaw[alligatorJawOffset]
+bool isAlligatorBearish = alligatorLips[alligatorLipsOffset] < alligatorTeeth[alligatorTeethOffset] and alligatorTeeth[alligatorTeethOffset] < alligatorJaw[alligatorJawOffset]
+
 //******************************************************************************************************************************************************
 // Fuzzy logic calculations
 //******************************************************************************************************************************************************
-totalWeight = maWeight + macdWeight + adxWeight + superTrendWeight + rsiWeight + vwapWeight + atrWeight + bollingerBandsWeight
+totalWeight = maWeight + macdWeight + adxWeight + superTrendWeight + rsiWeight + vwapWeight + atrWeight + bollingerBandsWeight + alligatorWeight
 int percent = 100
 maWeight := maWeight / totalWeight * percent
 macdWeight := macdWeight / totalWeight * percent
@@ -133,9 +148,10 @@ rsiWeight := rsiWeight / totalWeight * percent
 vwapWeight := vwapWeight / totalWeight * percent
 atrWeight := atrWeight / totalWeight * percent
 bollingerBandsWeight := bollingerBandsWeight / totalWeight * percent
+alligatorWeight := alligatorWeight / totalWeight * percent
 
-bullishWeightPercentage = (isMaBullish ? maWeight : 0) + (isMacdBullish ? macdWeight : 0) + (isAdxBullish ? adxWeight : 0) + (isSuperTrendBullish ? superTrendWeight : 0) + (isRsiBullish ? rsiWeight : 0) + (isVwapBullish ? vwapWeight : 0) + (isAtrBullish ? atrWeight : 0) + (isBollingerBandsBullish ? bollingerBandsWeight : 0)
-bearishWeightPercentage = (isMaBearish ? maWeight : 0) + (isMacdBearish ? macdWeight : 0) + (isAdxBearish ? adxWeight : 0) + (isSuperTrendBearish ? superTrendWeight : 0) + (isRsiBearish ? rsiWeight : 0) + (isVwapBearish ? vwapWeight : 0) + (isAtrBearish ? atrWeight : 0) + (isBollingerBandsBearish ? bollingerBandsWeight : 0)
+bullishWeightPercentage = (isMaBullish ? maWeight : 0) + (isMacdBullish ? macdWeight : 0) + (isAdxBullish ? adxWeight : 0) + (isSuperTrendBullish ? superTrendWeight : 0) + (isRsiBullish ? rsiWeight : 0) + (isVwapBullish ? vwapWeight : 0) + (isAtrBullish ? atrWeight : 0) + (isBollingerBandsBullish ? bollingerBandsWeight : 0) + (isAlligatorBullish ? alligatorWeight : 0)
+bearishWeightPercentage = (isMaBearish ? maWeight : 0) + (isMacdBearish ? macdWeight : 0) + (isAdxBearish ? adxWeight : 0) + (isSuperTrendBearish ? superTrendWeight : 0) + (isRsiBearish ? rsiWeight : 0) + (isVwapBearish ? vwapWeight : 0) + (isAtrBearish ? atrWeight : 0) + (isBollingerBandsBearish ? bollingerBandsWeight : 0) + (isAlligatorBearish ? alligatorWeight : 0)
 
 bearishWeightPercentage := bearishWeightPercentage * -1
 
