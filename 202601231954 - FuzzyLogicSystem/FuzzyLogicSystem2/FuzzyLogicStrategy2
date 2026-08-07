@@ -4,7 +4,6 @@ strategy(title = 'Fuzzy Logic System Basic Strategy', shorttitle = 'FuzzyLogicSy
 //******************************************************************************************************************************************************
 // Configuration inputs
 //******************************************************************************************************************************************************
-
 // StopLoss / TakeProffit percents
 stopLossPercent = input.int(defval = 1, title = 'Porcentaje de Stop Loss (%)', group = 'Risk control', step = 1)
 
@@ -19,20 +18,34 @@ int adxSmoothing = input.int(defval = 14, title = 'ADX smoothing', step = 1, gro
 float adxTrendThreshold = input.float(defval = 25.0, title = 'ADX trend threshold', step = 0.1, group = 'ADX')
 int superTrendAtrLength = input.int(defval = 10, title = 'SuperTrend ATR length', minval = 1, step = 1, group = 'SuperTrend')
 float superTrendFactor = input.float(defval = 3.0, title = 'SuperTrend factor', minval = 0.1, step = 0.1, group = 'SuperTrend')
+int rsiLength = input.int(defval = 14, title = 'RSI length', minval = 1, step = 1, group = 'RSI')
+float rsiOverboughtLevel = input.float(defval = 70.0, title = 'RSI overbought level', minval = 0, maxval = 100, step = 1, group = 'RSI')
+float rsiOversoldLevel = input.float(defval = 30.0, title = 'RSI oversold level', minval = 0, maxval = 100, step = 1, group = 'RSI')
+int atrLength = input.int(defval = 14, title = 'ATR length', minval = 1, step = 1, group = 'ATR')
+int bollingerBandsLength = input.int(defval = 20, title = 'Bollinger Bands length', minval = 1, step = 1, group = 'Bollinger Bands')
+float bollingerBandsMultiplier = input.float(defval = 2.0, title = 'Bollinger Bands multiplier', minval = 0.1, step = 0.1, group = 'Bollinger Bands')
 
 // Data source Configuration
 DataSource = input.source(defval = hl2, title="Prize data source", group="General configuration")
 
 // Fuzzy logic weight inputs
-maWeight = input.float(title = 'maWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic weigth", step = 1)
-macdWeight = input.float(title = 'macdWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic weigth", step = 1)
-adxWeight = input.float(title = 'adxWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic weigth", step = 1)
-superTrendWeight = input.float(title = 'superTrendWeight', defval = 1, minval = 0, maxval = 100, group = "Fuzzy logic weigth", step = 1)
+int defaultWeight = 60
+int nullWeight = 0
+int maxWeight = 100000
+int defaultStep = 10
+maWeight = input.float(title = 'maWeight', defval = defaultWeight, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
+macdWeight = input.float(title = 'macdWeight', defval = defaultWeight, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
+adxWeight = input.float(title = 'adxWeight', defval = defaultWeight, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
+superTrendWeight = input.float(title = 'superTrendWeight', defval = defaultWeight, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
+rsiWeight = input.float(title = 'rsiWeight', defval = nullWeight, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
+vwapWeight = input.float(title = 'vwapWeight', defval = nullWeight, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
+atrWeight  = input.float(title = 'atrWeight', defval = nullWeight, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
+bollingerBandsWeight = input.float(title = 'bollingerBandsWeight', defval = 13, minval = nullWeight, maxval = maxWeight, group = "Fuzzy logic weigth", step = defaultStep)
 
 // Percentual singnals
 bullishSignalPercent = input.float(title = 'bullishSignalPercent', defval = 90, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
 bullishOutSignalPercent = input.float(title = 'bullishOutSignalPercent', defval = 5, minval = 0, maxval = 100, group = "Fuzzy logic", step = 1)
-bearishSignalPercent = input.float(title = 'bullishSignalPercent', defval = -90, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
+bearishSignalPercent = input.float(title = 'bearishSignalPercent', defval = -90, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
 bearishOutSignalPercent = input.float(title = 'bearishOutSignalPercent', defval = -5, minval =-100, maxval = 0, group = "Fuzzy logic", step = 1)
 
 // colors
@@ -82,18 +95,47 @@ bool isAdxBearish = adx >= adxTrendThreshold and negativeDi > positiveDi
 bool isSuperTrendBullish = superTrendDirection < 0
 bool isSuperTrendBearish = superTrendDirection > 0
 
+// RSI calculation
+float rsi = ta.rsi(DataSource, rsiLength)
+
+bool isRsiBullish = rsi <= rsiOversoldLevel
+bool isRsiBearish = rsi >= rsiOverboughtLevel
+
+// VWAP calculation
+float vwap = ta.vwap(DataSource)
+
+bool isVwapBullish = DataSource > vwap
+bool isVwapBearish = DataSource < vwap
+
+// ATR calculation
+float atr = ta.atr(atrLength)
+bool isAtrIncreasing = atr > atr[1]
+
+bool isAtrBullish = isAtrIncreasing and close > open
+bool isAtrBearish = isAtrIncreasing and close < open
+
+// Bollinger Bands calculation
+[bollingerBandsBasis, bollingerBandsUpper, bollingerBandsLower] = ta.bb(DataSource, bollingerBandsLength, bollingerBandsMultiplier)
+
+bool isBollingerBandsBullish = DataSource <= bollingerBandsLower
+bool isBollingerBandsBearish = DataSource >= bollingerBandsUpper
+
 //******************************************************************************************************************************************************
 // Fuzzy logic calculations
 //******************************************************************************************************************************************************
-totalWeight = maWeight + macdWeight + adxWeight + superTrendWeight
+totalWeight = maWeight + macdWeight + adxWeight + superTrendWeight + rsiWeight + vwapWeight + atrWeight + bollingerBandsWeight
 int percent = 100
 maWeight := maWeight / totalWeight * percent
 macdWeight := macdWeight / totalWeight * percent
 adxWeight := adxWeight / totalWeight * percent
 superTrendWeight := superTrendWeight / totalWeight * percent
+rsiWeight := rsiWeight / totalWeight * percent
+vwapWeight := vwapWeight / totalWeight * percent
+atrWeight := atrWeight / totalWeight * percent
+bollingerBandsWeight := bollingerBandsWeight / totalWeight * percent
 
-bullishWeightPercentage = (isMaBullish ? maWeight : 0) + (isMacdBullish ? macdWeight : 0) + (isAdxBullish ? adxWeight : 0) + (isSuperTrendBullish ? superTrendWeight : 0)
-bearishWeightPercentage = (isMaBearish ? maWeight : 0) + (isMacdBearish ? macdWeight : 0) + (isAdxBearish ? adxWeight : 0) + (isSuperTrendBearish ? superTrendWeight : 0)
+bullishWeightPercentage = (isMaBullish ? maWeight : 0) + (isMacdBullish ? macdWeight : 0) + (isAdxBullish ? adxWeight : 0) + (isSuperTrendBullish ? superTrendWeight : 0) + (isRsiBullish ? rsiWeight : 0) + (isVwapBullish ? vwapWeight : 0) + (isAtrBullish ? atrWeight : 0) + (isBollingerBandsBullish ? bollingerBandsWeight : 0)
+bearishWeightPercentage = (isMaBearish ? maWeight : 0) + (isMacdBearish ? macdWeight : 0) + (isAdxBearish ? adxWeight : 0) + (isSuperTrendBearish ? superTrendWeight : 0) + (isRsiBearish ? rsiWeight : 0) + (isVwapBearish ? vwapWeight : 0) + (isAtrBearish ? atrWeight : 0) + (isBollingerBandsBearish ? bollingerBandsWeight : 0)
 
 bearishWeightPercentage := bearishWeightPercentage * -1
 
@@ -133,7 +175,6 @@ fill(bullishWeightPercentagePlot, bullishOutSignalPercentPlot, color=fillFuzzyOu
 fillFuzzyOutBearishColor = bearishWeightPercentage >= bearishOutSignalPercent ? color.new(colorLong, 60) : color.new(color.black, 100)
 fill(bearishWeightPercentagePlot, bearishOutSignalPercentPlot, color=fillFuzzyOutBearishColor, fillgaps=true)
 
-
 //***************************************************************************************************************************************************************
 // Operation orders
 //***************************************************************************************************************************************************************
@@ -143,13 +184,6 @@ var bool killShortEntry = false
 var bool longEntry = false
 var bool shortEntry = false
 var bool operationalBusy = false
-
-//bullishWeightPercentage
-//bearishWeightPercentage
-//bullishSignalPercent
-//bullishOutSignalPercent
-//bearishSignalPercent
-//bearishOutSignalPercent
 
 // Entry conditions
 longEntry := ta.crossover(bullishWeightPercentage, bullishSignalPercent)
