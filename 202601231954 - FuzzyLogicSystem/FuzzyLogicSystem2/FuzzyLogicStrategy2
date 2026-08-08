@@ -5,7 +5,8 @@ strategy(title = 'Fuzzy Logic System Basic Strategy', shorttitle = 'FuzzyLogicSy
 // Configuration inputs
 //******************************************************************************************************************************************************
 // StopLoss / TakeProffit percents
-stopLossPercent = input.int(defval = 1, title = 'Porcentaje de Stop Loss (%)', group = 'Risk control', step = 1)
+stopLossPercent = input.int(defval = 1, title = 'Stop Loss (%)', group = 'Risk control', step = 1)
+takeProfitPercent = input.int(defval = 50, title = 'Take profit (%)', group = 'Risk control', step = 1)
 
 maType = input.string(defval = "VWMA", title = "Basis MA Type", options = ["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="Averange")
 fastEmaPeriod = input.int(defval = 50, title = "Fast EMA", minval=1, step = 10, inline="Fast EMA", group="EMAs")
@@ -247,7 +248,8 @@ if (true)
         longOpComment = longOpName + str.tostring(longOpCount)
         strategy.entry(id=longOpName, direction=strategy.long, comment=longOpComment)
         stopLossPrize = strategy.position_avg_price * (1 - stopLossPercent / 100)
-        strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, comment_profit = "TP" + str.tostring(longOpCount), comment_loss = "SL" + str.tostring(longOpCount))
+        takeProfitPrize = strategy.position_avg_price * (1 + takeProfitPercent / 100)
+        strategy.exit(id=longOpName, from_entry=longOpName, comment=longOpComment, stop=stopLossPrize, limit = takeProfitPrize, comment_profit = "TP" + str.tostring(longOpCount), comment_loss = "SL" + str.tostring(longOpCount))
         operationalBusy := true
     if (shortEntry and not operationalBusy)
         shortOpCount += 1
@@ -255,7 +257,8 @@ if (true)
         shortOpComment = shortOpName + str.tostring(shortOpCount)
         strategy.entry(id=shortOpName, direction=strategy.short, comment=shortOpComment)
         stopLossPrize = strategy.position_avg_price * (1 + stopLossPercent / 100)
-        strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, comment_profit = "TP" + str.tostring(shortOpCount), comment_loss = "SL" + str.tostring(longOpCount))
+        takeProfitPrize = strategy.position_avg_price * (1 - takeProfitPercent / 100)
+        strategy.exit(id=shortOpName, from_entry=shortOpName, comment=shortOpComment, stop=stopLossPrize, limit = takeProfitPrize, comment_profit = "TP" + str.tostring(shortOpCount), comment_loss = "SL" + str.tostring(longOpCount))
         operationalBusy := true
     if (strategy.position_size == 0)
         operationalBusy := false
